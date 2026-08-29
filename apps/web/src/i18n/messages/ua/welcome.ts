@@ -1,0 +1,22 @@
+export const welcome = {
+  signIn: "Увійти",
+  calmerWay: "СПОКІЙНИЙ ОБЛІК РЕЧЕЙ",
+  knowWhat: "Знайте, що у вас є.",
+  knowWhere: "Знайте, де це зберігається.",
+  welcomeIntro:
+    "Приватний домашній інвентар для корисних, пам'ятних і тих речей, які потрібні саме в потрібний момент.",
+  startInventory: "Почати облік",
+  inventoryWithIntention: "Інвентар з турботою",
+  aPlaceForEverything: "Місце для кожної речі",
+  closeSignIn: "Закрити вхід",
+  privateInventory: "ВАШ ПРИВАТНИЙ ІНВЕНТАР",
+  welcomeBack: "З поверненням",
+  createAccount: "Створіть обліковий запис",
+  email: "Електронна пошта",
+  password: "Пароль",
+  working: "Зачекайте...",
+  needAccount: "Потрібен обліковий запис? Зареєструватися",
+  alreadyRegistered: "Вже зареєстровані? Увійти",
+  incorrectCredentials: "Невірна електронна пошта або пароль.",
+  unableToConnect: "Не вдалося з'єднатися з API.",
+} as const;

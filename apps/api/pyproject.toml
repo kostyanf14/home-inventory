@@ -1,0 +1,32 @@
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = ["B008"]
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
+
+[tool.pylint.main]
+py-version = "3.13"
+init-hook = "import sys; sys.path.append('.')"
+
+[tool.pylint.messages_control]
+disable = [
+  "C0114",
+  "C0115",
+  "C0116",
+  "C0103",
+  "R0903",
+  "R0913",
+  "R0914",
+  "R0917",
+  "R0801",
+  "W0613",
+  "W0621",
+]
+
+[tool.pylint.format]
+max-line-length = 100

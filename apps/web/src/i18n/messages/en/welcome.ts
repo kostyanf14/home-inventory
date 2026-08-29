@@ -1,0 +1,22 @@
+export const welcome = {
+  signIn: "Sign in",
+  calmerWay: "A CALMER WAY TO KEEP TRACK",
+  knowWhat: "Know what you have.",
+  knowWhere: "Know where it lives.",
+  welcomeIntro:
+    "A private home inventory for the useful, the sentimental, and the things you only need when you really need them.",
+  startInventory: "Start your inventory",
+  inventoryWithIntention: "Inventory with intention",
+  aPlaceForEverything: "A place for everything",
+  closeSignIn: "Close sign in",
+  privateInventory: "YOUR PRIVATE INVENTORY",
+  welcomeBack: "Welcome back",
+  createAccount: "Create your account",
+  email: "Email",
+  password: "Password",
+  working: "Working...",
+  needAccount: "Need an account? Register",
+  alreadyRegistered: "Already registered? Sign in",
+  incorrectCredentials: "Email or password is incorrect.",
+  unableToConnect: "Unable to connect to the API.",
+} as const;
