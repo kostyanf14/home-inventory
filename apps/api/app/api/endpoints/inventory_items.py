@@ -172,10 +172,9 @@ async def update_inventory_item(
     if "product_id" in update_data:
         await assert_product_available(db, current_user, update_data["product_id"])
 
+    next_type = update_data.get("item_type", item.item_type)
     try:
-        require_details_for_type(
-            item.item_type, item_in.medicine_details, item_in.equipment_details
-        )
+        require_details_for_type(next_type, item_in.medicine_details, item_in.equipment_details)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -186,10 +185,33 @@ async def update_inventory_item(
         item.medicine_details = merge_details(
             item.medicine_details, item_in.medicine_details, MedicineDetail
         )
+    elif item.item_type != ItemType.MEDICINE:
+        item.medicine_details = None
+
     if item_in.equipment_details:
         item.equipment_details = merge_details(
             item.equipment_details, item_in.equipment_details, EquipmentDetail
         )
+    elif item.item_type != ItemType.EQUIPMENT:
+        item.equipment_details = None
+
+    if item.item_type == ItemType.MEDICINE and item.medicine_details is None:
+        raise HTTPException(
+            status_code=400,
+            detail="medicine_details with an expiration_date is required for medicine",
+        )
+
+    if item.barcode:
+        catalog_product = await upsert_user_catalog_product(
+            db,
+            current_user,
+            barcode=item.barcode,
+            name=item.display_name,
+            default_unit=item.unit,
+            category=item.item_type.value,
+        )
+        if catalog_product is not None and item.product_id is None:
+            item.product_id = catalog_product.id
 
     await db.commit()
 

@@ -385,6 +385,54 @@ button {
 .danger-text:disabled {
   opacity: 0.55;
 }
+.editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+.editor-actions .danger-text {
+  margin-left: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.field-hint {
+  display: block;
+  margin-top: 4px;
+  color: #627d75;
+  font-size: 12px;
+  text-align: left;
+}
+.quick-add .field-hint {
+  margin-left: 0;
+}
+.quick-add label.check-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+.quick-add input[type="checkbox"] {
+  width: auto;
+  padding: 0;
+  margin: 0;
+  flex: none;
+  accent-color: #2f6762;
+}
+.selected-item-row td {
+  background: #eef4ea;
+}
+.quick-add textarea {
+  width: 100%;
+  border: 1px solid #d6ddd3;
+  border-radius: 3px;
+  padding: 8px;
+  color: #29433e;
+  font: inherit;
+  resize: vertical;
+}
 .medicine-row-actions {
   display: flex;
   justify-content: flex-end;
@@ -501,6 +549,7 @@ small {
 }
 .quick-add input,
 .quick-add select,
+.quick-add textarea,
 .auth-card input {
   border: 1px solid #d6ddd3;
   border-radius: 3px;
@@ -650,6 +699,8 @@ small {
 .item-actions {
   display: flex;
   justify-content: flex-end;
+  align-items: center;
+  gap: 6px;
 }
 .item-actions button {
   width: 31px;
@@ -661,8 +712,14 @@ small {
   color: #9a4d43;
   background: #fffefa;
 }
+.item-actions button.edit {
+  color: #40665d;
+}
 .item-actions button:hover:not(:disabled) {
   background: #f7e3de;
+}
+.item-actions button.edit:hover:not(:disabled) {
+  background: #e3ede2;
 }
 .item-actions button:disabled {
   opacity: 0.6;

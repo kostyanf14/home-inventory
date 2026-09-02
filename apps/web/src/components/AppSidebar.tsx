@@ -1,4 +1,4 @@
-import { Archive, Barcode, Boxes, ChevronDown, MapPin, Pill, ShieldCheck } from "lucide-react";
+import { Archive, Barcode, Boxes, ChevronDown, MapPin, Pill, ShieldCheck, SquarePen } from "lucide-react";
 import { useEffect, useState, type MouseEvent } from "react";
 
 import { api } from "../api";
@@ -107,6 +107,15 @@ export function AppSidebar({
         >
           <MapPin size={18} />
           {t("locations")}
+        </a>
+        <a
+          href={pathFromView("items")}
+          className={activeView === "items" ? "nav-link selected" : "nav-link"}
+          aria-current={activeView === "items" ? "page" : undefined}
+          onClick={(event) => openView(event, "items")}
+        >
+          <SquarePen size={18} />
+          {t("items")}
         </a>
         <button className="nav-link" onClick={onScanLookup}>
           <Barcode size={18} />

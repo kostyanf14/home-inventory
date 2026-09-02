@@ -5,6 +5,7 @@ import {
   CirclePlus,
   MapPin,
   PackagePlus,
+  Pencil,
   Pill,
   Search,
   Trash2,
@@ -32,6 +33,7 @@ type InventoryViewProps = {
   token: string;
   onSaved: () => void;
   onNotice: (message: string) => void;
+  onEditItem: (id: number) => void;
 };
 
 export function InventoryView({
@@ -42,6 +44,7 @@ export function InventoryView({
   token,
   onSaved,
   onNotice,
+  onEditItem,
 }: InventoryViewProps) {
   const { t } = useTranslation();
   const [filter, setFilter] = useState<"all" | InventoryItemType>("all");
@@ -110,6 +113,7 @@ export function InventoryView({
               token={token}
               onSaved={onSaved}
               onNotice={onNotice}
+              onEditItem={onEditItem}
             />
           ) : query || filter !== "all" ? (
             <Empty title={t("noMatchingItems")} detail={t("noMatchingItemsDetail")} />
@@ -153,9 +157,10 @@ type ItemTableProps = {
   token: string;
   onSaved: () => void;
   onNotice: (message: string) => void;
+  onEditItem: (id: number) => void;
 };
 
-function ItemTable({ items, places, sites, token, onSaved, onNotice }: ItemTableProps) {
+function ItemTable({ items, places, sites, token, onSaved, onNotice, onEditItem }: ItemTableProps) {
   const { t } = useTranslation();
   const [removingId, setRemovingId] = useState<number | null>(null);
 
@@ -225,6 +230,15 @@ function ItemTable({ items, places, sites, token, onSaved, onNotice }: ItemTable
               </td>
               <td>
                 <div className="item-actions">
+                  <button
+                    type="button"
+                    className="edit"
+                    aria-label={t("editItemNamed", { name: item.display_name })}
+                    title={t("editItemNamed", { name: item.display_name })}
+                    onClick={() => onEditItem(item.id)}
+                  >
+                    <Pencil size={16} />
+                  </button>
                   <button
                     type="button"
                     className="danger"

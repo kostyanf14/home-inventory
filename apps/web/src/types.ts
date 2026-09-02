@@ -1,4 +1,8 @@
 export type InventoryItemType = "medicine" | "equipment" | "other";
+export type ItemStatus = "active" | "used" | "disposed" | "missing";
+
+export const ITEM_TYPES = ["medicine", "equipment", "other"] as const;
+export const ITEM_STATUSES: ItemStatus[] = ["active", "used", "disposed", "missing"];
 
 export type Site = {
   id: number;
@@ -13,6 +17,23 @@ export type Place = {
   type?: string;
 };
 
+export type MedicineDetails = {
+  expiration_date: string;
+  dosage?: string | null;
+  form?: string | null;
+  requires_prescription?: boolean;
+  batch_number?: string | null;
+};
+
+export type EquipmentDetails = {
+  serial_number?: string | null;
+  buy_date?: string | null;
+  warranty_expiration_date?: string | null;
+  model_number?: string | null;
+  vendor_name?: string | null;
+  receipt_file_url?: string | null;
+};
+
 export type Item = {
   id: number;
   display_name: string;
@@ -21,15 +42,13 @@ export type Item = {
   unit: string;
   site_id?: number;
   place_id: number;
+  product_id?: number | null;
   barcode?: string | null;
-  status: string;
-  medicine_details?: {
-    expiration_date: string;
-  };
-  equipment_details?: {
-    buy_date?: string | null;
-    warranty_expiration_date?: string | null;
-  };
+  status: ItemStatus | string;
+  notes?: string | null;
+  photo_url?: string | null;
+  medicine_details?: MedicineDetails | null;
+  equipment_details?: EquipmentDetails | null;
 };
 
 export type ProductPreview = {
@@ -49,5 +68,5 @@ export type BarcodeLookupResponse = {
   message: string | null;
 };
 
-export type ActiveView = "inventory" | "locations" | "medicines";
+export type ActiveView = "inventory" | "locations" | "medicines" | "items";
 export type AuthMode = "login" | "register";

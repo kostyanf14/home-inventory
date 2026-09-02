@@ -292,6 +292,7 @@ class InventoryItemUpdate(UrlFieldsMixin):
     site_id: int | None = Field(default=None, ge=1)
     place_id: int | None = Field(default=None, ge=1)
     product_id: int | None = Field(default=None, ge=1)
+    item_type: ItemType | None = None
     display_name: ShortText | None = None
     barcode: ItemBarcode | None = None
     quantity: Quantity | None = None

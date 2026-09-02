@@ -27,6 +27,10 @@ test("updates the URL when switching pages", async ({ page }) => {
   await page.getByRole("link", { name: "Inventory" }).click();
   await expect(page).toHaveURL("/");
   await expect(page.getByRole("heading", { name: "Everything, in its place." })).toBeVisible();
+
+  await page.getByRole("link", { name: "Items" }).click();
+  await expect(page).toHaveURL("/items");
+  await expect(page.getByRole("heading", { name: "Create and edit items." })).toBeVisible();
 });
 
 test("opens a shared medicines URL", async ({ page }) => {
@@ -37,12 +41,12 @@ test("opens a shared medicines URL", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "In the cabinet." })).toBeVisible();
 });
 
-test("opens a shared locations URL", async ({ page }) => {
+test("opens a shared items URL", async ({ page }) => {
   await signedIn(page);
-  await page.goto("/locations");
+  await page.goto("/items/new");
 
-  await expect(page).toHaveURL("/locations");
-  await expect(page.getByRole("heading", { name: "Your locations." })).toBeVisible();
+  await expect(page).toHaveURL("/items/new");
+  await expect(page.getByRole("heading", { name: "New item" })).toBeVisible();
 });
 
 test("rewrites unknown paths to inventory", async ({ page }) => {

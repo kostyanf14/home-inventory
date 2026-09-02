@@ -368,3 +368,63 @@ async def test_use_rejects_non_medicine_items(client: AsyncClient, headers):
     resp = await client.post(f"/api/v1/inventory-items/{created.json()['id']}/use", headers=auth)
     assert resp.status_code == 400
     assert resp.json()["detail"] == "Only medicine can be used this way"
+
+
+@pytest.mark.asyncio
+async def test_patch_can_change_item_type_and_all_fields(client: AsyncClient, headers):
+    auth = await headers("edit-item@example.com")
+    site_id, place_id = await setup_location(client, auth)
+    created = await client.post(
+        "/api/v1/inventory-items",
+        json={"site_id": site_id, "place_id": place_id, "display_name": "Box"},
+        headers=auth,
+    )
+    item_id = created.json()["id"]
+
+    to_medicine = await client.patch(
+        f"/api/v1/inventory-items/{item_id}",
+        json={
+            "item_type": "medicine",
+            "display_name": "Ibuprofen",
+            "quantity": 12,
+            "unit": "tablets",
+            "status": "used",
+            "notes": "Kitchen shelf",
+            "photo_url": "https://example.com/photo.jpg",
+            "barcode": "4006381333931",
+            "medicine_details": {
+                "expiration_date": "2028-01-01",
+                "dosage": "400mg",
+                "form": "tablet",
+                "requires_prescription": True,
+                "batch_number": "B12",
+            },
+        },
+        headers=auth,
+    )
+    assert to_medicine.status_code == 200
+    body = to_medicine.json()
+    assert body["item_type"] == "medicine"
+    assert body["status"] == "used"
+    assert body["notes"] == "Kitchen shelf"
+    assert body["photo_url"] == "https://example.com/photo.jpg"
+    assert body["medicine_details"]["dosage"] == "400mg"
+    assert body["medicine_details"]["requires_prescription"] is True
+    assert body["equipment_details"] is None
+
+    to_other = await client.patch(
+        f"/api/v1/inventory-items/{item_id}",
+        json={"item_type": "other", "status": "active"},
+        headers=auth,
+    )
+    assert to_other.status_code == 200
+    assert to_other.json()["item_type"] == "other"
+    assert to_other.json()["medicine_details"] is None
+
+    missing_details = await client.patch(
+        f"/api/v1/inventory-items/{item_id}",
+        json={"item_type": "medicine"},
+        headers=auth,
+    )
+    assert missing_details.status_code == 400
+    assert "medicine_details" in missing_details.json()["detail"]

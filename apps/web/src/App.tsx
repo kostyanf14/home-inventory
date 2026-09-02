@@ -6,12 +6,13 @@ import { api, logout } from "./api";
 import { getAccessToken, setTokens, subscribeToToken, type TokenPair } from "./auth";
 import { AppSidebar } from "./components/AppSidebar";
 import { InventoryView } from "./components/InventoryView";
+import { ItemsView } from "./components/ItemsView";
 import { LocationsView } from "./components/LocationsView";
 import { MedicinesView } from "./components/MedicinesView";
 import { Welcome } from "./components/Welcome";
 import { useTranslation } from "./i18n";
 import type { TranslationKey } from "./i18n";
-import { canonicalPath, pathFromView, viewFromPath } from "./routes";
+import { canonicalPath, pathFromRoute, routeFromPath, type AppRoute, type ItemEditorId } from "./routes";
 import type { ActiveView, AuthMode, Item, Place, Site } from "./types";
 
 type Notice = { key: TranslationKey } | { message: string };
@@ -21,11 +22,10 @@ function App() {
   const [token, setToken] = useState(getAccessToken);
   const [authOpen, setAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState<AuthMode>("login");
-  const [activeView, setActiveView] = useState<ActiveView>(() =>
-    viewFromPath(window.location.pathname)
-  );
+  const [route, setRoute] = useState<AppRoute>(() => routeFromPath(window.location.pathname));
   const [notice, setNotice] = useState<Notice | null>(null);
   const client = useQueryClient();
+  const activeView = route.view;
 
   // api() clears the tokens when a refresh cannot save an expired session, so the
   // app must follow the store instead of holding a token that no longer works.
@@ -37,10 +37,10 @@ function App() {
     if (path !== canonical) {
       window.history.replaceState(null, "", canonical);
     }
-    setActiveView(viewFromPath(canonical));
+    setRoute(routeFromPath(canonical));
 
     function onPopState() {
-      setActiveView(viewFromPath(window.location.pathname));
+      setRoute(routeFromPath(window.location.pathname));
       setNotice(null);
     }
 
@@ -81,13 +81,21 @@ function App() {
     setAuthOpen(false);
   }
 
-  function changeView(view: ActiveView, nextNotice: Notice | null = null) {
-    const path = pathFromView(view);
+  function go(next: AppRoute, nextNotice: Notice | null = null) {
+    const path = pathFromRoute(next);
     if (window.location.pathname !== path) {
       window.history.pushState(null, "", path);
     }
-    setActiveView(view);
+    setRoute(next);
     setNotice(nextNotice);
+  }
+
+  function changeView(view: ActiveView, nextNotice: Notice | null = null) {
+    go({ view }, nextNotice);
+  }
+
+  function openItem(itemId?: ItemEditorId) {
+    go({ view: "items", itemId });
   }
 
   function showNotice(message: string) {
@@ -99,7 +107,7 @@ function App() {
   }
 
   function openBarcodeLookup() {
-    changeView("inventory", { key: "barcodeReady" });
+    go({ view: "inventory" }, { key: "barcodeReady" });
     window.setTimeout(() => {
       document.getElementById("item-barcode")?.focus();
     }, 0);
@@ -107,11 +115,21 @@ function App() {
 
   function focusAddForm() {
     if (activeView === "medicines") {
-      changeView("inventory");
+      go({ view: "inventory" });
       window.setTimeout(() => {
         const form = document.getElementById("quick-add-form");
         form?.scrollIntoView({ behavior: "smooth", block: "start" });
         form?.querySelector<HTMLInputElement | HTMLSelectElement>("input, select")?.focus();
+      }, 0);
+      return;
+    }
+
+    if (activeView === "items") {
+      go({ view: "items", itemId: "new" });
+      window.setTimeout(() => {
+        const form = document.getElementById("item-editor-form");
+        form?.scrollIntoView({ behavior: "smooth", block: "start" });
+        document.getElementById("editor-name")?.focus();
       }, 0);
       return;
     }
@@ -144,8 +162,11 @@ function App() {
       ? t("everythingInPlace")
       : activeView === "medicines"
         ? t("medicineCabinet")
-        : t("yourLocations");
-  const actionLabel = activeView === "locations" ? t("addLocation") : t("addItem");
+        : activeView === "items"
+          ? t("manageItems")
+          : t("yourLocations");
+  const actionLabel =
+    activeView === "locations" ? t("addLocation") : activeView === "items" ? t("newItem") : t("addItem");
 
   return (
     <main className="app-shell">
@@ -190,6 +211,7 @@ function App() {
             token={token}
             onSaved={invalidateInventory}
             onNotice={showNotice}
+            onEditItem={openItem}
           />
         ) : activeView === "medicines" ? (
           <MedicinesView
@@ -198,6 +220,18 @@ function App() {
             places={places.data ?? []}
             sites={sites.data ?? []}
             token={token}
+            onSaved={invalidateInventory}
+            onNotice={showNotice}
+          />
+        ) : activeView === "items" ? (
+          <ItemsView
+            isLoading={isLoading}
+            items={items.data ?? []}
+            places={places.data ?? []}
+            sites={sites.data ?? []}
+            selectedId={route.itemId}
+            token={token}
+            onOpenItem={openItem}
             onSaved={invalidateInventory}
             onNotice={showNotice}
           />
