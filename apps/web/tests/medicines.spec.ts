@@ -107,8 +107,7 @@ async function openMedicines(page: Page, items = medicineItems()) {
           : [];
     await route.fulfill({ contentType: "application/json", body: JSON.stringify(body) });
   });
-  await page.goto("/");
-  await page.getByRole("button", { name: "Medicines", exact: true }).click();
+  await page.goto("/medicines");
 }
 
 test("shows every medicine by default with site/place locations", async ({ page }) => {

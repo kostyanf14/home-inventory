@@ -46,7 +46,7 @@ test("translates and clears navigation notices", async ({ page }) => {
     "Пошук за штрихкодом доступний під час додавання речі.x"
   );
 
-  await page.getByRole("button", { name: "Інвентар", exact: true }).click();
+  await page.getByRole("link", { name: "Інвентар", exact: true }).click();
   await expect(page.getByRole("status")).toBeHidden();
 });
 
@@ -92,8 +92,7 @@ test("adds a site without losing the form element after the API request", async 
     });
   });
   await page.goto("/");
-
-  await page.getByRole("button", { name: "Locations" }).click();
+  await page.getByRole("link", { name: "Locations" }).click();
   await page.getByRole("textbox", { name: "Name" }).fill("Home");
   await page.getByRole("button", { name: "Add site" }).click();
 
@@ -134,7 +133,7 @@ test("updates and deletes a site", async ({ page }) => {
     });
   });
   await page.goto("/");
-  await page.getByRole("button", { name: "Locations" }).click();
+  await page.getByRole("link", { name: "Locations" }).click();
 
   await page.getByRole("button", { name: "Edit location" }).click();
   await page.locator(".location-edit input").first().fill("Flat");

@@ -80,6 +80,9 @@ button {
   text-align: left;
   font-size: 14px;
   border-radius: 4px;
+  text-decoration: none;
+  cursor: pointer;
+  box-sizing: border-box;
 }
 .nav-link:hover,
 .nav-link.selected {

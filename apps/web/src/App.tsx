@@ -11,6 +11,7 @@ import { MedicinesView } from "./components/MedicinesView";
 import { Welcome } from "./components/Welcome";
 import { useTranslation } from "./i18n";
 import type { TranslationKey } from "./i18n";
+import { canonicalPath, pathFromView, viewFromPath } from "./routes";
 import type { ActiveView, AuthMode, Item, Place, Site } from "./types";
 
 type Notice = { key: TranslationKey } | { message: string };
@@ -20,13 +21,32 @@ function App() {
   const [token, setToken] = useState(getAccessToken);
   const [authOpen, setAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState<AuthMode>("login");
-  const [activeView, setActiveView] = useState<ActiveView>("inventory");
+  const [activeView, setActiveView] = useState<ActiveView>(() =>
+    viewFromPath(window.location.pathname)
+  );
   const [notice, setNotice] = useState<Notice | null>(null);
   const client = useQueryClient();
 
   // api() clears the tokens when a refresh cannot save an expired session, so the
   // app must follow the store instead of holding a token that no longer works.
   useEffect(() => subscribeToToken(setToken), []);
+
+  useEffect(() => {
+    const path = window.location.pathname;
+    const canonical = canonicalPath(path);
+    if (path !== canonical) {
+      window.history.replaceState(null, "", canonical);
+    }
+    setActiveView(viewFromPath(canonical));
+
+    function onPopState() {
+      setActiveView(viewFromPath(window.location.pathname));
+      setNotice(null);
+    }
+
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
 
   const sites = useQuery({
     queryKey: ["sites"],
@@ -53,7 +73,6 @@ function App() {
   function signOut() {
     void logout().finally(() => {
       client.clear();
-      setActiveView("inventory");
     });
   }
 
@@ -62,9 +81,13 @@ function App() {
     setAuthOpen(false);
   }
 
-  function changeView(view: ActiveView) {
+  function changeView(view: ActiveView, nextNotice: Notice | null = null) {
+    const path = pathFromView(view);
+    if (window.location.pathname !== path) {
+      window.history.pushState(null, "", path);
+    }
     setActiveView(view);
-    setNotice(null);
+    setNotice(nextNotice);
   }
 
   function showNotice(message: string) {
@@ -76,8 +99,7 @@ function App() {
   }
 
   function openBarcodeLookup() {
-    setActiveView("inventory");
-    setNotice({ key: "barcodeReady" });
+    changeView("inventory", { key: "barcodeReady" });
     window.setTimeout(() => {
       document.getElementById("item-barcode")?.focus();
     }, 0);
@@ -85,8 +107,7 @@ function App() {
 
   function focusAddForm() {
     if (activeView === "medicines") {
-      setActiveView("inventory");
-      setNotice(null);
+      changeView("inventory");
       window.setTimeout(() => {
         const form = document.getElementById("quick-add-form");
         form?.scrollIntoView({ behavior: "smooth", block: "start" });

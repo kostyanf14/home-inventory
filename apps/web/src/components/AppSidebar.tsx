@@ -1,8 +1,9 @@
 import { Archive, Barcode, Boxes, ChevronDown, MapPin, Pill, ShieldCheck } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type MouseEvent } from "react";
 
 import { api } from "../api";
 import { type TranslationKey, useTranslation } from "../i18n";
+import { pathFromView } from "../routes";
 import type { ActiveView } from "../types";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 
@@ -63,6 +64,14 @@ export function AppSidebar({
     };
   }, [token]);
 
+  function openView(event: MouseEvent<HTMLAnchorElement>, view: ActiveView) {
+    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+      return;
+    }
+    event.preventDefault();
+    onViewChange(view);
+  }
+
   return (
     <aside className="sidebar">
       <a className="brand" href="#top" aria-label="Storied home">
@@ -72,27 +81,33 @@ export function AppSidebar({
         <span>Storied</span>
       </a>
       <nav aria-label="Main navigation">
-        <button
+        <a
+          href={pathFromView("inventory")}
           className={activeView === "inventory" ? "nav-link selected" : "nav-link"}
-          onClick={() => onViewChange("inventory")}
+          aria-current={activeView === "inventory" ? "page" : undefined}
+          onClick={(event) => openView(event, "inventory")}
         >
           <Boxes size={18} />
           {t("inventory")}
-        </button>
-        <button
+        </a>
+        <a
+          href={pathFromView("medicines")}
           className={activeView === "medicines" ? "nav-link selected" : "nav-link"}
-          onClick={() => onViewChange("medicines")}
+          aria-current={activeView === "medicines" ? "page" : undefined}
+          onClick={(event) => openView(event, "medicines")}
         >
           <Pill size={18} />
           {t("medicines")}
-        </button>
-        <button
+        </a>
+        <a
+          href={pathFromView("locations")}
           className={activeView === "locations" ? "nav-link selected" : "nav-link"}
-          onClick={() => onViewChange("locations")}
+          aria-current={activeView === "locations" ? "page" : undefined}
+          onClick={(event) => openView(event, "locations")}
         >
           <MapPin size={18} />
           {t("locations")}
-        </button>
+        </a>
         <button className="nav-link" onClick={onScanLookup}>
           <Barcode size={18} />
           {t("scanLookup")}
