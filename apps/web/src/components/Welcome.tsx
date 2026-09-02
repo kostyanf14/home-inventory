@@ -1,6 +1,8 @@
 import { FormEvent, useState } from "react";
 import { Archive, ArrowRight, House } from "lucide-react";
 
+import { apiUrl, readError } from "../api";
+import type { TokenPair } from "../auth";
 import type { AuthMode } from "../types";
 import { useTranslation } from "../i18n";
 import { LanguageSwitcher } from "./LanguageSwitcher";
@@ -11,7 +13,7 @@ type WelcomeProps = {
   setMode: (mode: AuthMode) => void;
   onStart: () => void;
   onClose: () => void;
-  onAuthenticated: (token: string) => void;
+  onAuthenticated: (tokens: TokenPair) => void;
 };
 
 export function Welcome({
@@ -37,29 +39,29 @@ export function Welcome({
 
     try {
       if (mode === "register") {
-        const register = await fetch("/api/v1/auth/register", {
+        const register = await fetch(apiUrl("/auth/register"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email, password, name: data.get("name") }),
         });
 
         if (!register.ok) {
-          throw new Error((await register.json()).detail);
+          throw new Error(await readError(register, t("unableToRegister")));
         }
       }
 
       const form = new URLSearchParams({ username: email, password });
-      const login = await fetch("/api/v1/auth/login", {
+      const login = await fetch(apiUrl("/auth/login"), {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: form,
       });
 
       if (!login.ok) {
-        throw new Error(t("incorrectCredentials"));
+        throw new Error(login.status === 429 ? t("tooManyAttempts") : t("incorrectCredentials"));
       }
 
-      onAuthenticated((await login.json()).access_token);
+      onAuthenticated((await login.json()) as TokenPair);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : t("unableToConnect"));
     } finally {
@@ -129,7 +131,15 @@ export function Welcome({
             </label>
             <label>
               {t("password")}
-              <input name="password" type="password" minLength={8} required />
+              <input
+                name="password"
+                type="password"
+                minLength={8}
+                maxLength={72}
+                autoComplete={mode === "login" ? "current-password" : "new-password"}
+                required
+              />
+              {mode === "register" && <small>{t("passwordHint")}</small>}
             </label>
             {error && <p className="form-error">{error}</p>}
             <button className="primary-action" disabled={busy}>

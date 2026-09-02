@@ -5,8 +5,9 @@ echo "Starting Home Inventory Development Environment..."
 
 if [ ! -f "apps/api/.env" ]; then
     echo "Creating apps/api/.env from template..."
-    echo "DATABASE_URL=sqlite+aiosqlite:///./home_inventory.db" > apps/api/.env
-    echo "SECRET_KEY=dev_secret_key_change_in_production_1234567890" >> apps/api/.env
+    echo "ENVIRONMENT=development" > apps/api/.env
+    echo "DATABASE_URL=sqlite+aiosqlite:///./home_inventory.db" >> apps/api/.env
+    # SECRET_KEY stays empty for local dev; production must set its own (see apps/api/.env.example).
 fi
 
 echo "Installing dependencies..."

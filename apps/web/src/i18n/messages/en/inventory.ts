@@ -30,4 +30,7 @@ export const inventory = {
   createSiteAndPlace: "Create a site and place before adding an item.",
   itemAdded: "Item added to your inventory.",
   unableToAddItem: "Unable to add item.",
+  noMatchingItems: "No items match your search",
+  noMatchingItemsDetail: "Try a different name, place, or barcode, or clear the type filter.",
+  noPlacesInSite: "This site has no places yet",
 } as const;

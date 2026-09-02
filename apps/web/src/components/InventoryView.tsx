@@ -36,7 +36,23 @@ export function InventoryView({
 }: InventoryViewProps) {
   const { t } = useTranslation();
   const [filter, setFilter] = useState<"all" | InventoryItemType>("all");
-  const visibleItems = items.filter((item) => filter === "all" || item.item_type === filter);
+  const [search, setSearch] = useState("");
+  const query = search.trim().toLowerCase();
+  const placeName = (placeId: number) =>
+    places.find((place) => place.id === placeId)?.name.toLowerCase() ?? "";
+  const visibleItems = items.filter((item) => {
+    if (filter !== "all" && item.item_type !== filter) {
+      return false;
+    }
+    if (!query) {
+      return true;
+    }
+    return (
+      item.display_name.toLowerCase().includes(query) ||
+      (item.barcode ?? "").toLowerCase().includes(query) ||
+      placeName(item.place_id).includes(query)
+    );
+  });
   const medicineCount = items.filter((item) => item.item_type === "medicine").length;
   const equipmentCount = items.filter((item) => item.item_type === "equipment").length;
 
@@ -57,7 +73,12 @@ export function InventoryView({
             </div>
             <label className="search">
               <Search size={17} />
-              <input placeholder={t("searchInventory")} aria-label={t("searchInventory")} />
+              <input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder={t("searchInventory")}
+                aria-label={t("searchInventory")}
+              />
             </label>
           </div>
           <div className="filter-row">
@@ -76,6 +97,8 @@ export function InventoryView({
             <Loading />
           ) : visibleItems.length ? (
             <ItemTable items={visibleItems} places={places} />
+          ) : query || filter !== "all" ? (
+            <Empty title={t("noMatchingItems")} detail={t("noMatchingItemsDetail")} />
           ) : (
             <Empty title={t("yourInventoryIsClear")} detail={t("inventoryEmptyDetail")} />
           )}
@@ -179,6 +202,8 @@ type QuickAddProps = {
 function QuickAdd({ token, sites, places, onSaved, onNotice }: QuickAddProps) {
   const { t } = useTranslation();
   const [kind, setKind] = useState<InventoryItemType>("other");
+  const [siteId, setSiteId] = useState("");
+  const sitePlaces = places.filter((place) => String(place.site_id) === siteId);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -219,6 +244,7 @@ function QuickAdd({ token, sites, places, onSaved, onNotice }: QuickAddProps) {
         }),
       });
       formElement.reset();
+      setSiteId("");
       onSaved();
       onNotice(t("itemAdded"));
     } catch (error) {
@@ -253,7 +279,12 @@ function QuickAdd({ token, sites, places, onSaved, onNotice }: QuickAddProps) {
       </div>
       <label>
         {t("site")}
-        <select name="site" required defaultValue="">
+        <select
+          name="site"
+          required
+          value={siteId}
+          onChange={(event) => setSiteId(event.target.value)}
+        >
           <option value="" disabled>
             {t("selectSite")}
           </option>
@@ -266,11 +297,11 @@ function QuickAdd({ token, sites, places, onSaved, onNotice }: QuickAddProps) {
       </label>
       <label>
         {t("places")}
-        <select name="place" required defaultValue="">
+        <select name="place" required defaultValue="" disabled={!siteId}>
           <option value="" disabled>
-            {t("selectPlace")}
+            {siteId && !sitePlaces.length ? t("noPlacesInSite") : t("selectPlace")}
           </option>
-          {places.map((place) => (
+          {sitePlaces.map((place) => (
             <option value={place.id} key={place.id}>
               {place.name}
             </option>

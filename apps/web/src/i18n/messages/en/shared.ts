@@ -21,4 +21,5 @@ export const shared = {
   status: "Status",
   saveChanges: "Save changes",
   cancel: "Cancel",
+  sessionExpired: "Your session has expired. Please sign in again.",
 } as const;

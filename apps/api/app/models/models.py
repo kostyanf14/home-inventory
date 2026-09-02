@@ -12,6 +12,7 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    UniqueConstraint,
 )
 from sqlalchemy.orm import relationship
 
@@ -20,6 +21,13 @@ from app.db.session import Base
 
 def utc_now():
     return datetime.now(UTC)
+
+
+def as_utc(value: datetime | None) -> datetime | None:
+    """SQLite hands back naive datetimes; treat stored values as UTC."""
+    if value is None:
+        return None
+    return value if value.tzinfo else value.replace(tzinfo=UTC)
 
 
 class ItemType(enum.StrEnum):
@@ -48,6 +56,24 @@ class User(Base):
     inventory_items = relationship(
         "InventoryItem", back_populates="owner", cascade="all, delete-orphan"
     )
+    products = relationship("Product", back_populates="owner", cascade="all, delete-orphan")
+    auth_sessions = relationship("AuthSession", back_populates="user", cascade="all, delete-orphan")
+
+
+class AuthSession(Base):
+    """One login. Access and refresh tokens carry its `sid`, so it can be revoked."""
+
+    __tablename__ = "auth_sessions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    session_id = Column(String, unique=True, index=True, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    revoked_at = Column(DateTime(timezone=True), nullable=True)
+    rotated_to = Column(String, nullable=True)
+
+    user = relationship("User", back_populates="auth_sessions")
 
 
 class Site(Base):
@@ -96,11 +122,14 @@ class Place(Base):
 class Product(Base):
     __tablename__ = "products"
 
+    __table_args__ = (UniqueConstraint("user_id", "barcode", name="uq_products_user_barcode"),)
+
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=True)
     name = Column(String, nullable=False)
     brand = Column(String, nullable=True)
     category = Column(String, nullable=True)
-    barcode = Column(String, unique=True, index=True, nullable=True)
+    barcode = Column(String, index=True, nullable=True)
     manufacturer = Column(String, nullable=True)
     default_unit = Column(String, nullable=True)
     image_url = Column(String, nullable=True)
@@ -108,6 +137,8 @@ class Product(Base):
     source_external_id = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
     updated_at = Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False)
+
+    owner = relationship("User", back_populates="products")
 
 
 class InventoryItem(Base):

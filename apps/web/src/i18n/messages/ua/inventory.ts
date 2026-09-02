@@ -30,4 +30,7 @@ export const inventory = {
   createSiteAndPlace: "Створіть місце і локацію перед додаванням речі.",
   itemAdded: "Річ додано до інвентарю.",
   unableToAddItem: "Не вдалося додати річ.",
+  noMatchingItems: "Немає речей за вашим запитом",
+  noMatchingItemsDetail: "Спробуйте іншу назву, локацію чи штрихкод або скиньте фільтр типу.",
+  noPlacesInSite: "У цьому місці ще немає локацій",
 } as const;

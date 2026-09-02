@@ -6,10 +6,12 @@ import { uaMessages } from "./i18n/messages/ua";
 export type { TranslationKey } from "./i18n/messages/en";
 export type Language = "en" | "ua";
 
+export type TranslationParams = Record<string, string | number>;
+
 type TranslationContextValue = {
   language: Language;
   setLanguage: (language: Language) => void;
-  t: (key: TranslationKey) => string;
+  t: (key: TranslationKey, params?: TranslationParams) => string;
 };
 
 const translations = {
@@ -31,8 +33,16 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
     document.documentElement.lang = language === "ua" ? "uk" : "en";
   }, [language]);
 
-  function t(key: TranslationKey) {
-    return translations[language][key];
+  function t(key: TranslationKey, params?: TranslationParams) {
+    const message: string = translations[language][key];
+
+    if (!params) {
+      return message;
+    }
+
+    return message.replace(/\{(\w+)\}/g, (match, name: string) =>
+      name in params ? String(params[name]) : match
+    );
   }
 
   return (

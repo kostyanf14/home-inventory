@@ -19,7 +19,9 @@ export type Item = {
   item_type: InventoryItemType;
   quantity: number;
   unit: string;
+  site_id?: number;
   place_id: number;
+  barcode?: string | null;
   status: string;
   medicine_details?: {
     expiration_date: string;

@@ -21,4 +21,5 @@ export const shared = {
   status: "Статус",
   saveChanges: "Зберегти зміни",
   cancel: "Скасувати",
+  sessionExpired: "Ваш сеанс завершився. Будь ласка, увійдіть знову.",
 } as const;

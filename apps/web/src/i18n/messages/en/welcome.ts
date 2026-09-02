@@ -19,4 +19,7 @@ export const welcome = {
   alreadyRegistered: "Already registered? Sign in",
   incorrectCredentials: "Email or password is incorrect.",
   unableToConnect: "Unable to connect to the API.",
+  passwordHint: "At least 8 characters (72 bytes maximum).",
+  unableToRegister: "Unable to create the account.",
+  tooManyAttempts: "Too many attempts. Please wait a few minutes and try again.",
 } as const;

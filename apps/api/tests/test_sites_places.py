@@ -1,25 +1,18 @@
 import pytest
 from httpx import AsyncClient
-
-
-async def get_auth_headers(client: AsyncClient, email: str = "sites@example.com") -> dict:
-    await client.post("/api/v1/auth/register", json={"email": email, "password": "password123"})
-    resp = await client.post(
-        "/api/v1/auth/login", data={"username": email, "password": "password123"}
-    )
-    token = resp.json()["access_token"]
-    return {"Authorization": f"Bearer {token}"}
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 @pytest.mark.asyncio
-async def test_sites_and_places_crud(client: AsyncClient):
-    headers = await get_auth_headers(client)
+async def test_sites_and_places_crud(client: AsyncClient, headers):
+    auth = await headers("sites@example.com")
 
     # Create Site
     site_resp = await client.post(
         "/api/v1/sites",
         json={"name": "Home", "type": "house", "city": "Springfield"},
-        headers=headers,
+        headers=auth,
     )
     assert site_resp.status_code == 201
     site = site_resp.json()
@@ -27,14 +20,14 @@ async def test_sites_and_places_crud(client: AsyncClient):
     site_id = site["id"]
 
     # List Sites
-    sites_list = await client.get("/api/v1/sites", headers=headers)
+    sites_list = await client.get("/api/v1/sites", headers=auth)
     assert len(sites_list.json()) == 1
 
     # Create Place in Site
     place_resp = await client.post(
         "/api/v1/places",
         json={"site_id": site_id, "name": "Kitchen", "type": "room"},
-        headers=headers,
+        headers=auth,
     )
     assert place_resp.status_code == 201
     place = place_resp.json()
@@ -42,5 +35,48 @@ async def test_sites_and_places_crud(client: AsyncClient):
     assert place["site_id"] == site_id
 
     # List Places
-    places_list = await client.get(f"/api/v1/places?site_id={site_id}", headers=headers)
+    places_list = await client.get(f"/api/v1/places?site_id={site_id}", headers=auth)
     assert len(places_list.json()) == 1
+
+    # Each place is listed once, even with a parent in the same site
+    await client.post(
+        "/api/v1/places",
+        json={"site_id": site_id, "name": "Shelf", "parent_place_id": place["id"]},
+        headers=auth,
+    )
+    all_places = await client.get("/api/v1/places", headers=auth)
+    assert len({item["id"] for item in all_places.json()}) == len(all_places.json()) == 2
+
+
+@pytest.mark.asyncio
+async def test_place_create_rejects_a_site_the_caller_does_not_own(client: AsyncClient, headers):
+    auth = await headers("places@example.com")
+
+    resp = await client.post(
+        "/api/v1/places", json={"site_id": 4242, "name": "Ghost room"}, headers=auth
+    )
+    assert resp.status_code == 400
+    assert resp.json()["detail"] == "Invalid site_id"
+
+
+@pytest.mark.asyncio
+async def test_blank_names_are_rejected(client: AsyncClient, headers):
+    auth = await headers("names@example.com")
+
+    resp = await client.post("/api/v1/sites", json={"name": "   "}, headers=auth)
+    assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_sqlite_enforces_foreign_keys(db: AsyncSession):
+    enabled = await db.execute(text("PRAGMA foreign_keys"))
+    assert enabled.scalar() == 1
+
+    with pytest.raises(Exception):  # noqa: B017 - driver-specific IntegrityError
+        await db.execute(
+            text(
+                "INSERT INTO places (site_id, name, created_at, updated_at) "
+                "VALUES (9999, 'Orphan', '2026-01-01', '2026-01-01')"
+            )
+        )
+        await db.commit()

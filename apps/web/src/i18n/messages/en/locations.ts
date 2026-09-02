@@ -12,8 +12,9 @@ export const locations = {
   addPlace: "Add place",
   editLocation: "Edit location",
   deleteLocation: "Delete location",
-  confirmDeleteSite: "Delete this site and all of its places?",
-  confirmDeletePlace: "Delete this place?",
+  confirmDeleteSite:
+    'Delete the site "{name}"? Its {places} place(s) and {items} item(s) will be deleted too.',
+  confirmDeletePlace: 'Delete the place "{name}"? Its {items} item(s) will be deleted too.',
   siteAdded: "Site added.",
   placeAdded: "Place added.",
   locationUpdated: "Location updated.",

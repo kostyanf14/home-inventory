@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -11,12 +11,63 @@ from app.models.models import (
     ItemType,
     MedicineDetail,
     Place,
+    Product,
     Site,
     User,
 )
-from app.schemas.schemas import InventoryItemCreate, InventoryItemRead, InventoryItemUpdate
+from app.schemas.schemas import (
+    InventoryItemCreate,
+    InventoryItemRead,
+    InventoryItemUpdate,
+    require_details_for_type,
+)
 
 router = APIRouter(prefix="/inventory-items", tags=["inventory-items"])
+
+
+async def assert_location_owned(db: AsyncSession, user: User, site_id: int, place_id: int) -> None:
+    """A site must belong to the caller and the place must belong to that site."""
+    site_res = await db.execute(select(Site).where(Site.id == site_id, Site.user_id == user.id))
+    if not site_res.scalars().first():
+        raise HTTPException(status_code=400, detail="Invalid site_id")
+
+    place_res = await db.execute(
+        select(Place).where(Place.id == place_id, Place.site_id == site_id)
+    )
+    if not place_res.scalars().first():
+        raise HTTPException(status_code=400, detail="Invalid place_id for this site")
+
+
+async def assert_product_available(db: AsyncSession, user: User, product_id: int | None) -> None:
+    if product_id is None:
+        return
+    result = await db.execute(
+        select(Product).where(
+            Product.id == product_id,
+            or_(Product.user_id == user.id, Product.user_id.is_(None)),
+        )
+    )
+    if not result.scalars().first():
+        raise HTTPException(status_code=400, detail="Invalid product_id")
+
+
+def merge_details(existing, payload, model):
+    """Update the detail row in place, or build a fresh one for this item."""
+    if existing is None:
+        return model(**payload.model_dump())
+    for field, value in payload.model_dump().items():
+        setattr(existing, field, value)
+    return existing
+
+
+def item_query(*, with_details: bool = True):
+    query = select(InventoryItem)
+    if with_details:
+        query = query.options(
+            selectinload(InventoryItem.medicine_details),
+            selectinload(InventoryItem.equipment_details),
+        )
+    return query
 
 
 @router.get("", response_model=list[InventoryItemRead])
@@ -28,21 +79,14 @@ async def list_inventory_items(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    query = (
-        select(InventoryItem)
-        .options(
-            selectinload(InventoryItem.medicine_details),
-            selectinload(InventoryItem.equipment_details),
-        )
-        .where(InventoryItem.user_id == current_user.id)
-    )
-    if site_id:
+    query = item_query().where(InventoryItem.user_id == current_user.id)
+    if site_id is not None:
         query = query.where(InventoryItem.site_id == site_id)
-    if place_id:
+    if place_id is not None:
         query = query.where(InventoryItem.place_id == place_id)
-    if item_type:
+    if item_type is not None:
         query = query.where(InventoryItem.item_type == item_type)
-    if barcode:
+    if barcode is not None:
         query = query.where(InventoryItem.barcode == barcode)
 
     result = await db.execute(query)
@@ -55,39 +99,22 @@ async def create_inventory_item(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    # Verify site and place ownership
-    site_res = await db.execute(
-        select(Site).where(Site.id == item_in.site_id, Site.user_id == current_user.id)
-    )
-    if not site_res.scalars().first():
-        raise HTTPException(status_code=400, detail="Invalid site_id")
-
-    place_res = await db.execute(
-        select(Place).where(Place.id == item_in.place_id, Place.site_id == item_in.site_id)
-    )
-    if not place_res.scalars().first():
-        raise HTTPException(status_code=400, detail="Invalid place_id for this site")
+    await assert_location_owned(db, current_user, item_in.site_id, item_in.place_id)
+    await assert_product_available(db, current_user, item_in.product_id)
 
     item_data = item_in.model_dump(exclude={"medicine_details", "equipment_details"})
     item = InventoryItem(**item_data, user_id=current_user.id)
 
-    if item_in.item_type == ItemType.MEDICINE and item_in.medicine_details:
+    if item_in.medicine_details:
         item.medicine_details = MedicineDetail(**item_in.medicine_details.model_dump())
-    elif item_in.item_type == ItemType.EQUIPMENT and item_in.equipment_details:
+    if item_in.equipment_details:
         item.equipment_details = EquipmentDetail(**item_in.equipment_details.model_dump())
 
     db.add(item)
     await db.commit()
 
     # Re-query with details loaded
-    result = await db.execute(
-        select(InventoryItem)
-        .options(
-            selectinload(InventoryItem.medicine_details),
-            selectinload(InventoryItem.equipment_details),
-        )
-        .where(InventoryItem.id == item.id)
-    )
+    result = await db.execute(item_query().where(InventoryItem.id == item.id))
     return result.scalars().first()
 
 
@@ -95,15 +122,9 @@ async def create_inventory_item(
 async def get_inventory_item(
     item_id: int, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ):
-    query = (
-        select(InventoryItem)
-        .options(
-            selectinload(InventoryItem.medicine_details),
-            selectinload(InventoryItem.equipment_details),
-        )
-        .where(InventoryItem.id == item_id, InventoryItem.user_id == current_user.id)
+    result = await db.execute(
+        item_query().where(InventoryItem.id == item_id, InventoryItem.user_id == current_user.id)
     )
-    result = await db.execute(query)
     item = result.scalars().first()
     if not item:
         raise HTTPException(status_code=404, detail="Inventory item not found")
@@ -117,15 +138,9 @@ async def update_inventory_item(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    query = (
-        select(InventoryItem)
-        .options(
-            selectinload(InventoryItem.medicine_details),
-            selectinload(InventoryItem.equipment_details),
-        )
-        .where(InventoryItem.id == item_id, InventoryItem.user_id == current_user.id)
+    result = await db.execute(
+        item_query().where(InventoryItem.id == item_id, InventoryItem.user_id == current_user.id)
     )
-    result = await db.execute(query)
     item = result.scalars().first()
     if not item:
         raise HTTPException(status_code=404, detail="Inventory item not found")
@@ -133,36 +148,52 @@ async def update_inventory_item(
     update_data = item_in.model_dump(
         exclude_unset=True, exclude={"medicine_details", "equipment_details"}
     )
+
+    # Relocating must land inside the caller's own site/place graph, exactly as on create.
+    if "site_id" in update_data or "place_id" in update_data:
+        await assert_location_owned(
+            db,
+            current_user,
+            update_data.get("site_id", item.site_id),
+            update_data.get("place_id", item.place_id),
+        )
+    if "product_id" in update_data:
+        await assert_product_available(db, current_user, update_data["product_id"])
+
+    try:
+        require_details_for_type(
+            item.item_type, item_in.medicine_details, item_in.equipment_details
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
     for field, value in update_data.items():
         setattr(item, field, value)
 
     if item_in.medicine_details:
-        if item.medicine_details:
-            for f, v in item_in.medicine_details.model_dump(exclude_unset=True).items():
-                setattr(item.medicine_details, f, v)
-        else:
-            item.medicine_details = MedicineDetail(**item_in.medicine_details.model_dump())
-
+        item.medicine_details = merge_details(
+            item.medicine_details, item_in.medicine_details, MedicineDetail
+        )
     if item_in.equipment_details:
-        if item.equipment_details:
-            for f, v in item_in.equipment_details.model_dump(exclude_unset=True).items():
-                setattr(item.equipment_details, f, v)
-        else:
-            item.equipment_details = EquipmentDetail(**item_in.equipment_details.model_dump())
+        item.equipment_details = merge_details(
+            item.equipment_details, item_in.equipment_details, EquipmentDetail
+        )
 
     await db.commit()
-    await db.refresh(item)
-    return item
+
+    result = await db.execute(item_query().where(InventoryItem.id == item.id))
+    return result.scalars().first()
 
 
 @router.delete("/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_inventory_item(
     item_id: int, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ):
-    query = select(InventoryItem).where(
-        InventoryItem.id == item_id, InventoryItem.user_id == current_user.id
+    result = await db.execute(
+        item_query(with_details=False).where(
+            InventoryItem.id == item_id, InventoryItem.user_id == current_user.id
+        )
     )
-    result = await db.execute(query)
     item = result.scalars().first()
     if not item:
         raise HTTPException(status_code=404, detail="Inventory item not found")

@@ -19,4 +19,7 @@ export const welcome = {
   alreadyRegistered: "Вже зареєстровані? Увійти",
   incorrectCredentials: "Невірна електронна пошта або пароль.",
   unableToConnect: "Не вдалося з'єднатися з API.",
+  passwordHint: "Щонайменше 8 символів (максимум 72 байти).",
+  unableToRegister: "Не вдалося створити обліковий запис.",
+  tooManyAttempts: "Занадто багато спроб. Зачекайте кілька хвилин і спробуйте ще раз.",
 } as const;

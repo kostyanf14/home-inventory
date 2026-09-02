@@ -12,8 +12,9 @@ export const locations = {
   addPlace: "Додати локацію",
   editLocation: "Редагувати локацію",
   deleteLocation: "Видалити локацію",
-  confirmDeleteSite: "Видалити це місце та всі його локації?",
-  confirmDeletePlace: "Видалити цю локацію?",
+  confirmDeleteSite:
+    'Видалити місце "{name}"? Разом з ним буде видалено локацій: {places} і речей: {items}.',
+  confirmDeletePlace: 'Видалити локацію "{name}"? Разом з нею буде видалено речей: {items}.',
   siteAdded: "Місце додано.",
   placeAdded: "Локацію додано.",
   locationUpdated: "Локацію оновлено.",

@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CirclePlus } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { api } from "./api";
+import { api, logout } from "./api";
+import { getAccessToken, setTokens, subscribeToToken, type TokenPair } from "./auth";
 import { AppSidebar } from "./components/AppSidebar";
 import { InventoryView } from "./components/InventoryView";
 import { LocationsView } from "./components/LocationsView";
@@ -15,12 +16,16 @@ type Notice = { key: TranslationKey } | { message: string };
 
 function App() {
   const { t } = useTranslation();
-  const [token, setToken] = useState(() => localStorage.getItem("inventory-token") ?? "");
+  const [token, setToken] = useState(getAccessToken);
   const [authOpen, setAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState<AuthMode>("login");
   const [activeView, setActiveView] = useState<ActiveView>("inventory");
   const [notice, setNotice] = useState<Notice | null>(null);
   const client = useQueryClient();
+
+  // api() clears the tokens when a refresh cannot save an expired session, so the
+  // app must follow the store instead of holding a token that no longer works.
+  useEffect(() => subscribeToToken(setToken), []);
 
   const sites = useQuery({
     queryKey: ["sites"],
@@ -45,14 +50,14 @@ function App() {
   }
 
   function signOut() {
-    localStorage.removeItem("inventory-token");
-    setToken("");
-    setActiveView("inventory");
+    void logout().finally(() => {
+      client.clear();
+      setActiveView("inventory");
+    });
   }
 
-  function authenticate(newToken: string) {
-    localStorage.setItem("inventory-token", newToken);
-    setToken(newToken);
+  function authenticate(tokens: TokenPair) {
+    setTokens(tokens);
     setAuthOpen(false);
   }
 
@@ -92,6 +97,7 @@ function App() {
   }
 
   const isLoading = sites.isLoading || places.isLoading || items.isLoading;
+  const loadError = sites.error ?? places.error ?? items.error;
   const heading = activeView === "inventory" ? t("everythingInPlace") : t("yourLocations");
   const actionLabel = activeView === "inventory" ? t("addItem") : t("addLocation");
 
@@ -114,6 +120,11 @@ function App() {
             {actionLabel}
           </button>
         </header>
+        {loadError && (
+          <div className="notice" role="alert">
+            {loadError.message}
+          </div>
+        )}
         {notice && (
           <div className="notice" role="status">
             {"key" in notice ? t(notice.key) : notice.message}
@@ -134,9 +145,10 @@ function App() {
           />
         ) : (
           <LocationsView
-            isLoading={sites.isLoading || places.isLoading}
+            isLoading={sites.isLoading || places.isLoading || items.isLoading}
             sites={sites.data ?? []}
             places={places.data ?? []}
+            items={items.data ?? []}
             token={token}
             onSaved={invalidateInventory}
             onNotice={showNotice}

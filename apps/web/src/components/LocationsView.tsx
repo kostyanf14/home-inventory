@@ -3,13 +3,14 @@ import { Check, CirclePlus, House, MapPin, Pencil, Trash2, X } from "lucide-reac
 
 import { api } from "../api";
 import { useTranslation } from "../i18n";
-import type { Place, Site } from "../types";
+import type { Item, Place, Site } from "../types";
 import { Empty, Loading } from "./Feedback";
 
 type LocationsViewProps = {
   isLoading: boolean;
   sites: Site[];
   places: Place[];
+  items: Item[];
   token: string;
   onSaved: () => void;
   onNotice: (message: string) => void;
@@ -19,6 +20,7 @@ export function LocationsView({
   isLoading,
   sites,
   places,
+  items,
   token,
   onSaved,
   onNotice,
@@ -39,6 +41,7 @@ export function LocationsView({
           <LocationList
             sites={sites}
             places={places}
+            items={items}
             token={token}
             onSaved={onSaved}
             onNotice={onNotice}
@@ -53,6 +56,7 @@ export function LocationsView({
 type LocationListProps = {
   sites: Site[];
   places: Place[];
+  items: Item[];
   token: string;
   onSaved: () => void;
   onNotice: (message: string) => void;
@@ -60,9 +64,22 @@ type LocationListProps = {
 
 type EditableLocation = { kind: "site"; location: Site } | { kind: "place"; location: Place };
 
-function LocationList({ sites, places, token, onSaved, onNotice }: LocationListProps) {
+function LocationList({ sites, places, items, token, onSaved, onNotice }: LocationListProps) {
   const { t } = useTranslation();
   const [editing, setEditing] = useState<EditableLocation | null>(null);
+
+  function sitePlaces(siteId: number) {
+    return places.filter((place) => place.site_id === siteId);
+  }
+
+  function siteItemCount(siteId: number) {
+    const placeIds = new Set(sitePlaces(siteId).map((place) => place.id));
+    return items.filter((item) => placeIds.has(item.place_id)).length;
+  }
+
+  function placeItemCount(placeId: number) {
+    return items.filter((item) => item.place_id === placeId).length;
+  }
 
   if (!sites.length) {
     return <Empty title={t("startWithSite")} detail={t("startWithSiteDetail")} />;
@@ -76,7 +93,12 @@ function LocationList({ sites, places, token, onSaved, onNotice }: LocationListP
             icon={<House size={20} />}
             location={site}
             kind="site"
-            secondary={`${places.filter((place) => place.site_id === site.id).length} ${t("places").toLowerCase()}`}
+            secondary={`${sitePlaces(site.id).length} ${t("places").toLowerCase()}`}
+            confirmMessage={t("confirmDeleteSite", {
+              name: site.name,
+              places: sitePlaces(site.id).length,
+              items: siteItemCount(site.id),
+            })}
             editing={editing?.kind === "site" && editing.location.id === site.id}
             token={token}
             onEdit={() => setEditing({ kind: "site", location: site })}
@@ -93,32 +115,34 @@ function LocationList({ sites, places, token, onSaved, onNotice }: LocationListP
             }}
             onError={onNotice}
           />
-          {places
-            .filter((place) => place.site_id === site.id)
-            .map((place) => (
-              <LocationRow
-                icon={<MapPin size={17} />}
-                location={place}
-                kind="place"
-                secondary={place.type || t("places")}
-                editing={editing?.kind === "place" && editing.location.id === place.id}
-                token={token}
-                onEdit={() => setEditing({ kind: "place", location: place })}
-                onCancel={() => setEditing(null)}
-                onSaved={() => {
-                  setEditing(null);
-                  onSaved();
-                  onNotice(t("locationUpdated"));
-                }}
-                onDeleted={() => {
-                  setEditing(null);
-                  onSaved();
-                  onNotice(t("locationDeleted"));
-                }}
-                onError={onNotice}
-                key={place.id}
-              />
-            ))}
+          {sitePlaces(site.id).map((place) => (
+            <LocationRow
+              icon={<MapPin size={17} />}
+              location={place}
+              kind="place"
+              secondary={place.type || t("places")}
+              confirmMessage={t("confirmDeletePlace", {
+                name: place.name,
+                items: placeItemCount(place.id),
+              })}
+              editing={editing?.kind === "place" && editing.location.id === place.id}
+              token={token}
+              onEdit={() => setEditing({ kind: "place", location: place })}
+              onCancel={() => setEditing(null)}
+              onSaved={() => {
+                setEditing(null);
+                onSaved();
+                onNotice(t("locationUpdated"));
+              }}
+              onDeleted={() => {
+                setEditing(null);
+                onSaved();
+                onNotice(t("locationDeleted"));
+              }}
+              onError={onNotice}
+              key={place.id}
+            />
+          ))}
         </div>
       ))}
     </div>
@@ -130,6 +154,7 @@ type LocationRowProps = {
   location: Site | Place;
   kind: "site" | "place";
   secondary: string;
+  confirmMessage: string;
   editing: boolean;
   token: string;
   onEdit: () => void;
@@ -144,6 +169,7 @@ function LocationRow({
   location,
   kind,
   secondary,
+  confirmMessage,
   editing,
   token,
   onEdit,
@@ -176,9 +202,7 @@ function LocationRow({
   }
 
   async function remove() {
-    const confirmation = kind === "site" ? t("confirmDeleteSite") : t("confirmDeletePlace");
-
-    if (!window.confirm(confirmation)) {
+    if (!window.confirm(confirmMessage)) {
       return;
     }
 
