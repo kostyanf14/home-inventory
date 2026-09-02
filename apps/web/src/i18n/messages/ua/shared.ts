@@ -22,4 +22,6 @@ export const shared = {
   saveChanges: "Зберегти зміни",
   cancel: "Скасувати",
   sessionExpired: "Ваш сеанс завершився. Будь ласка, увійдіть знову.",
+  devEnvironment: "Середовище розробки",
+  testEnvironment: "Тестове середовище",
 } as const;

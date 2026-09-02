@@ -109,3 +109,10 @@ async def test_unknown_email_and_wrong_password_look_the_same(client: AsyncClien
 
     assert wrong_password.status_code == unknown_email.status_code == 401
     assert wrong_password.json() == unknown_email.json()
+
+
+@pytest.mark.asyncio
+async def test_meta_reports_environment_without_auth(client: AsyncClient):
+    resp = await client.get("/api/v1/meta")
+    assert resp.status_code == 200
+    assert resp.json() == {"environment": settings.ENVIRONMENT}

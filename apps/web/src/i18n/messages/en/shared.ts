@@ -22,4 +22,6 @@ export const shared = {
   saveChanges: "Save changes",
   cancel: "Cancel",
   sessionExpired: "Your session has expired. Please sign in again.",
+  devEnvironment: "Dev environment",
+  testEnvironment: "Test environment",
 } as const;

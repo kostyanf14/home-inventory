@@ -113,6 +113,7 @@ function App() {
     <main className="app-shell">
       <AppSidebar
         activeView={activeView}
+        token={token}
         onViewChange={changeView}
         onNotice={showTranslatedNotice}
         onScanLookup={openBarcodeLookup}

@@ -72,3 +72,9 @@ def root():
         "message": "Welcome to Home Inventory API",
         "docs": "/docs" if settings.docs_enabled else None,
     }
+
+
+@app.get(f"{settings.API_V1_STR}/meta")
+def meta():
+    """Public build info so the web UI can warn when this is not production."""
+    return {"environment": settings.ENVIRONMENT}

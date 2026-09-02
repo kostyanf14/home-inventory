@@ -50,6 +50,30 @@ test("translates and clears navigation notices", async ({ page }) => {
   await expect(page.getByRole("status")).toBeHidden();
 });
 
+test("shows a non-production note above the language switcher", async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem("inventory-token", "test-token");
+    localStorage.setItem("inventory-refresh-token", "test-refresh-token");
+    localStorage.setItem("inventory-language", "en");
+  });
+  await page.route("**/api/v1/**", async (route) => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith("/meta")) {
+      await route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({ environment: "test" }),
+      });
+      return;
+    }
+    await route.fulfill({ contentType: "application/json", body: "[]" });
+  });
+  await page.goto("/");
+
+  await expect(page.getByRole("note")).toHaveText("Test environment");
+  await page.getByRole("button", { name: "UA" }).click();
+  await expect(page.getByRole("note")).toHaveText("Тестове середовище");
+});
+
 test("adds a site without losing the form element after the API request", async ({ page }) => {
   await page.addInitScript(() => {
     localStorage.setItem("inventory-token", "test-token");

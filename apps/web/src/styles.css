@@ -89,6 +89,24 @@ button {
 .sidebar-bottom {
   margin-top: auto;
 }
+.env-note {
+  margin: 0 10px 8px;
+  padding: 7px 10px;
+  border-radius: 3px;
+  border: 1px solid #c4a35a55;
+  color: #f0e2b8;
+  background: #3a4530;
+  font:
+    10px "DM Mono",
+    monospace;
+  letter-spacing: 0.3px;
+  line-height: 1.35;
+}
+.env-note.test {
+  border-color: #7aa0c455;
+  color: #d5e4f5;
+  background: #2f3f4a;
+}
 .language-switcher {
   color: #aec1ba;
   display: flex;
@@ -785,6 +803,13 @@ small {
     justify-content: center;
     gap: 2px;
     padding: 8px 1px;
+  }
+  .sidebar .env-note {
+    margin: 0 2px 6px;
+    padding: 5px 2px;
+    text-align: center;
+    font-size: 8px;
+    letter-spacing: 0;
   }
   .workspace {
     margin-left: 64px;
