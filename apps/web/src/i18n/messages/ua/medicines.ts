@@ -1,0 +1,23 @@
+export const medicines = {
+  medicineCabinet: "В аптечці.",
+  medicineCabinetIntro: "Кожен флакон і блістер — за місцем і терміном придатності.",
+  allLocations: "Усі локації",
+  filterLocation: "Локація",
+  expiredOnly: "Лише прострочені",
+  expired: "Прострочено",
+  useOne: "Використати 1",
+  useOneNamed: "Використати 1 {name}",
+  medicineUsed: "Використано 1 {name}.",
+  unableToUseMedicine: "Не вдалося використати ці ліки.",
+  noMedicines: "Ліків ще немає",
+  noMedicinesDetail: "Додайте ліки в Інвентарі — вони з’являться тут.",
+  noMatchingMedicines: "Немає ліків за цими фільтрами",
+  noMatchingMedicinesDetail: "Спробуйте іншу локацію або скиньте фільтр прострочених.",
+  expiredCount: "Прострочені",
+  deleteFiltered: "Видалити {count} у цьому списку",
+  confirmDeleteFiltered: "Видалити {count} ліки з цього списку?",
+  filteredMedicinesDeleted: "Видалено {count} ліки.",
+  filteredMedicinesPartiallyDeleted:
+    "Видалено {removed} з {total} ліків. Деякі не вдалося видалити.",
+  unableToDeleteFiltered: "Не вдалося видалити ліки з цього списку.",
+} as const;

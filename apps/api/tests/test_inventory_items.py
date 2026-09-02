@@ -310,3 +310,61 @@ async def test_owner_can_delete_an_inventory_item(client: AsyncClient, headers):
 
     again = await client.delete(f"/api/v1/inventory-items/{item_id}", headers=auth)
     assert again.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_using_medicine_reduces_quantity_by_one(client: AsyncClient, headers):
+    auth = await headers("use-med@example.com")
+    site_id, place_id = await setup_location(client, auth)
+
+    created = await client.post(
+        "/api/v1/inventory-items",
+        json={
+            "site_id": site_id,
+            "place_id": place_id,
+            "item_type": "medicine",
+            "display_name": "Ibuprofen",
+            "quantity": 20,
+            "unit": "tablets",
+            "medicine_details": {"expiration_date": "2027-12-31"},
+        },
+        headers=auth,
+    )
+    item_id = created.json()["id"]
+
+    used = await client.post(f"/api/v1/inventory-items/{item_id}/use", headers=auth)
+    assert used.status_code == 200
+    assert used.json()["quantity"] == 19
+
+    last = await client.post(
+        "/api/v1/inventory-items",
+        json={
+            "site_id": site_id,
+            "place_id": place_id,
+            "item_type": "medicine",
+            "display_name": "Last tablet",
+            "quantity": 1,
+            "medicine_details": {"expiration_date": "2027-12-31"},
+        },
+        headers=auth,
+    )
+    last_id = last.json()["id"]
+    emptied = await client.post(f"/api/v1/inventory-items/{last_id}/use", headers=auth)
+    assert emptied.json()["quantity"] == 0
+    refused = await client.post(f"/api/v1/inventory-items/{last_id}/use", headers=auth)
+    assert refused.status_code == 400
+    assert refused.json()["detail"] == "Not enough quantity to use 1"
+
+
+@pytest.mark.asyncio
+async def test_use_rejects_non_medicine_items(client: AsyncClient, headers):
+    auth = await headers("use-other@example.com")
+    site_id, place_id = await setup_location(client, auth)
+    created = await client.post(
+        "/api/v1/inventory-items",
+        json={"site_id": site_id, "place_id": place_id, "display_name": "Hammer"},
+        headers=auth,
+    )
+    resp = await client.post(f"/api/v1/inventory-items/{created.json()['id']}/use", headers=auth)
+    assert resp.status_code == 400
+    assert resp.json()["detail"] == "Only medicine can be used this way"

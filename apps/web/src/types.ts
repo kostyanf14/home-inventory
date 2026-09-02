@@ -49,5 +49,5 @@ export type BarcodeLookupResponse = {
   message: string | null;
 };
 
-export type ActiveView = "inventory" | "locations";
+export type ActiveView = "inventory" | "locations" | "medicines";
 export type AuthMode = "login" | "register";

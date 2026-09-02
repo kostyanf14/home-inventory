@@ -197,6 +197,29 @@ async def update_inventory_item(
     return result.scalars().first()
 
 
+@router.post("/{item_id}/use", response_model=InventoryItemRead)
+async def use_inventory_item(
+    item_id: int, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
+):
+    """Subtract one unit from a medicine. Other item types are rejected."""
+    result = await db.execute(
+        item_query().where(InventoryItem.id == item_id, InventoryItem.user_id == current_user.id)
+    )
+    item = result.scalars().first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Inventory item not found")
+    if item.item_type != ItemType.MEDICINE:
+        raise HTTPException(status_code=400, detail="Only medicine can be used this way")
+    if item.quantity < 1:
+        raise HTTPException(status_code=400, detail="Not enough quantity to use 1")
+
+    item.quantity -= 1
+    await db.commit()
+
+    result = await db.execute(item_query().where(InventoryItem.id == item.id))
+    return result.scalars().first()
+
+
 @router.delete("/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_inventory_item(
     item_id: int, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)

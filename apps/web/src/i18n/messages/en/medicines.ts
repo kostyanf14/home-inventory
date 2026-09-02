@@ -1,0 +1,23 @@
+export const medicines = {
+  medicineCabinet: "In the cabinet.",
+  medicineCabinetIntro: "Every bottle and blister, by place and expiry.",
+  allLocations: "All locations",
+  filterLocation: "Location",
+  expiredOnly: "Expired only",
+  expired: "Expired",
+  useOne: "Use 1",
+  useOneNamed: "Use 1 {name}",
+  medicineUsed: "Used 1 {name}.",
+  unableToUseMedicine: "Unable to use this medicine.",
+  noMedicines: "No medicines yet",
+  noMedicinesDetail: "Add a medicine from Inventory, then it will appear here.",
+  noMatchingMedicines: "No medicines match these filters",
+  noMatchingMedicinesDetail: "Try another location or clear the expired filter.",
+  expiredCount: "Expired",
+  deleteFiltered: "Delete {count} in this view",
+  confirmDeleteFiltered: "Remove {count} medicine(s) shown in this list?",
+  filteredMedicinesDeleted: "Removed {count} medicine(s).",
+  filteredMedicinesPartiallyDeleted:
+    "Removed {removed} of {total} medicines. Some could not be deleted.",
+  unableToDeleteFiltered: "Unable to delete the medicines in this view.",
+} as const;

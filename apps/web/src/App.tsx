@@ -7,6 +7,7 @@ import { getAccessToken, setTokens, subscribeToToken, type TokenPair } from "./a
 import { AppSidebar } from "./components/AppSidebar";
 import { InventoryView } from "./components/InventoryView";
 import { LocationsView } from "./components/LocationsView";
+import { MedicinesView } from "./components/MedicinesView";
 import { Welcome } from "./components/Welcome";
 import { useTranslation } from "./i18n";
 import type { TranslationKey } from "./i18n";
@@ -83,6 +84,17 @@ function App() {
   }
 
   function focusAddForm() {
+    if (activeView === "medicines") {
+      setActiveView("inventory");
+      setNotice(null);
+      window.setTimeout(() => {
+        const form = document.getElementById("quick-add-form");
+        form?.scrollIntoView({ behavior: "smooth", block: "start" });
+        form?.querySelector<HTMLInputElement | HTMLSelectElement>("input, select")?.focus();
+      }, 0);
+      return;
+    }
+
     const formId = activeView === "inventory" ? "quick-add-form" : "location-form";
     const form = document.getElementById(formId);
 
@@ -106,8 +118,13 @@ function App() {
 
   const isLoading = sites.isLoading || places.isLoading || items.isLoading;
   const loadError = sites.error ?? places.error ?? items.error;
-  const heading = activeView === "inventory" ? t("everythingInPlace") : t("yourLocations");
-  const actionLabel = activeView === "inventory" ? t("addItem") : t("addLocation");
+  const heading =
+    activeView === "inventory"
+      ? t("everythingInPlace")
+      : activeView === "medicines"
+        ? t("medicineCabinet")
+        : t("yourLocations");
+  const actionLabel = activeView === "locations" ? t("addLocation") : t("addItem");
 
   return (
     <main className="app-shell">
@@ -145,6 +162,16 @@ function App() {
         )}
         {activeView === "inventory" ? (
           <InventoryView
+            isLoading={isLoading}
+            items={items.data ?? []}
+            places={places.data ?? []}
+            sites={sites.data ?? []}
+            token={token}
+            onSaved={invalidateInventory}
+            onNotice={showNotice}
+          />
+        ) : activeView === "medicines" ? (
+          <MedicinesView
             isLoading={isLoading}
             items={items.data ?? []}
             places={places.data ?? []}

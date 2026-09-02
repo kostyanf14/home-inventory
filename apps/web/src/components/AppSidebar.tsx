@@ -1,4 +1,4 @@
-import { Archive, Barcode, Boxes, ChevronDown, MapPin, ShieldCheck } from "lucide-react";
+import { Archive, Barcode, Boxes, ChevronDown, MapPin, Pill, ShieldCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { api } from "../api";
@@ -78,6 +78,13 @@ export function AppSidebar({
         >
           <Boxes size={18} />
           {t("inventory")}
+        </button>
+        <button
+          className={activeView === "medicines" ? "nav-link selected" : "nav-link"}
+          onClick={() => onViewChange("medicines")}
+        >
+          <Pill size={18} />
+          {t("medicines")}
         </button>
         <button
           className={activeView === "locations" ? "nav-link selected" : "nav-link"}
