@@ -62,17 +62,22 @@ test("filters the inventory table from the search box", async ({ page }) => {
 
   await expect(page.getByRole("button", { name: "Delete Drill" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Delete Ibuprofen" })).toBeVisible();
+  await expect(page.getByRole("cell", { name: "Home/Garage" })).toBeVisible();
+  await expect(page.getByRole("cell", { name: "Office/Desk drawer" })).toBeVisible();
 
   const search = page.getByRole("textbox", { name: "Search inventory" });
   await search.fill("ibupro");
   await expect(page.getByRole("button", { name: "Delete Drill" })).toBeHidden();
   await expect(page.getByRole("button", { name: "Delete Ibuprofen" })).toBeVisible();
 
-  // Barcodes and place names are searchable too.
+  // Barcodes and site/place names are searchable too.
   await search.fill("4006381333931");
   await expect(page.getByRole("button", { name: "Delete Drill" })).toBeVisible();
   await search.fill("desk");
   await expect(page.getByRole("button", { name: "Delete Ibuprofen" })).toBeVisible();
+  await search.fill("home");
+  await expect(page.getByRole("button", { name: "Delete Drill" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Delete Ibuprofen" })).toBeHidden();
 
   await search.fill("nothing matches this");
   await expect(page.getByText("No items match your search")).toBeVisible();

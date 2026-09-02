@@ -13,6 +13,7 @@ import {
 
 import { api } from "../api";
 import { useTranslation } from "../i18n";
+import { locationPath } from "../location";
 import type { BarcodeLookupResponse, InventoryItemType, Item, Place, Site } from "../types";
 import { Empty, Loading } from "./Feedback";
 
@@ -46,8 +47,6 @@ export function InventoryView({
   const [filter, setFilter] = useState<"all" | InventoryItemType>("all");
   const [search, setSearch] = useState("");
   const query = search.trim().toLowerCase();
-  const placeName = (placeId: number) =>
-    places.find((place) => place.id === placeId)?.name.toLowerCase() ?? "";
   const visibleItems = items.filter((item) => {
     if (filter !== "all" && item.item_type !== filter) {
       return false;
@@ -58,7 +57,7 @@ export function InventoryView({
     return (
       item.display_name.toLowerCase().includes(query) ||
       (item.barcode ?? "").toLowerCase().includes(query) ||
-      placeName(item.place_id).includes(query)
+      locationPath(item, places, sites).toLowerCase().includes(query)
     );
   });
   const medicineCount = items.filter((item) => item.item_type === "medicine").length;
@@ -107,6 +106,7 @@ export function InventoryView({
             <ItemTable
               items={visibleItems}
               places={places}
+              sites={sites}
               token={token}
               onSaved={onSaved}
               onNotice={onNotice}
@@ -149,12 +149,13 @@ function Stat({ icon, value, label, tone }: StatProps) {
 type ItemTableProps = {
   items: Item[];
   places: Place[];
+  sites: Site[];
   token: string;
   onSaved: () => void;
   onNotice: (message: string) => void;
 };
 
-function ItemTable({ items, places, token, onSaved, onNotice }: ItemTableProps) {
+function ItemTable({ items, places, sites, token, onSaved, onNotice }: ItemTableProps) {
   const { t } = useTranslation();
   const [removingId, setRemovingId] = useState<number | null>(null);
 
@@ -215,7 +216,7 @@ function ItemTable({ items, places, token, onSaved, onNotice }: ItemTableProps) 
                   </small>
                 )}
               </td>
-              <td>{places.find((place) => place.id === item.place_id)?.name ?? t("unassigned")}</td>
+              <td>{locationPath(item, places, sites) || t("unassigned")}</td>
               <td>
                 {item.quantity} {item.unit}
               </td>
