@@ -8,10 +8,17 @@ type AppSidebarProps = {
   activeView: ActiveView;
   onViewChange: (view: ActiveView) => void;
   onNotice: (key: TranslationKey) => void;
+  onScanLookup: () => void;
   onSignOut: () => void;
 };
 
-export function AppSidebar({ activeView, onViewChange, onNotice, onSignOut }: AppSidebarProps) {
+export function AppSidebar({
+  activeView,
+  onViewChange,
+  onNotice,
+  onScanLookup,
+  onSignOut,
+}: AppSidebarProps) {
   const { t } = useTranslation();
 
   return (
@@ -37,7 +44,7 @@ export function AppSidebar({ activeView, onViewChange, onNotice, onSignOut }: Ap
           <MapPin size={18} />
           {t("locations")}
         </button>
-        <button className="nav-link" onClick={() => onNotice("barcodeReady")}>
+        <button className="nav-link" onClick={onScanLookup}>
           <Barcode size={18} />
           {t("scanLookup")}
         </button>

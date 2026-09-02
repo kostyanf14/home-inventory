@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.api.deps import get_current_user
+from app.api.endpoints.barcode import upsert_user_catalog_product
 from app.db.session import get_db
 from app.models.models import (
     EquipmentDetail,
@@ -103,6 +104,17 @@ async def create_inventory_item(
     await assert_product_available(db, current_user, item_in.product_id)
 
     item_data = item_in.model_dump(exclude={"medicine_details", "equipment_details"})
+    if item_in.barcode:
+        catalog_product = await upsert_user_catalog_product(
+            db,
+            current_user,
+            barcode=item_in.barcode,
+            name=item_in.display_name,
+            default_unit=item_in.unit,
+            category=item_in.item_type.value,
+        )
+        if catalog_product is not None and item_data.get("product_id") is None:
+            item_data["product_id"] = catalog_product.id
     item = InventoryItem(**item_data, user_id=current_user.id)
 
     if item_in.medicine_details:

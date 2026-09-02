@@ -12,8 +12,15 @@ import {
 
 import { api } from "../api";
 import { useTranslation } from "../i18n";
-import type { InventoryItemType, Item, Place, Site } from "../types";
+import type { BarcodeLookupResponse, InventoryItemType, Item, Place, Site } from "../types";
 import { Empty, Loading } from "./Feedback";
+
+const CATALOG_BARCODE = /^[0-9]{6,14}$/;
+const ITEM_TYPES = ["medicine", "equipment", "other"] as const;
+
+function itemTypeFromCategory(category: string | null | undefined): InventoryItemType | null {
+  return ITEM_TYPES.find((type) => type === category) ?? null;
+}
 
 type InventoryViewProps = {
   isLoading: boolean;
@@ -165,6 +172,7 @@ function ItemTable({ items, places }: ItemTableProps) {
                   )}
                 </span>
                 <strong>{item.display_name}</strong>
+                {item.barcode && <small>{item.barcode}</small>}
                 {item.medicine_details && (
                   <small>
                     {t("expires")} {item.medicine_details.expiration_date}
@@ -199,11 +207,83 @@ type QuickAddProps = {
   onNotice: (message: string) => void;
 };
 
+type LookupState =
+  | { kind: "idle" }
+  | { kind: "invalid" }
+  | { kind: "looking" }
+  | { kind: "found"; name: string }
+  | { kind: "not_found" }
+  | { kind: "error"; message: string };
+
 function QuickAdd({ token, sites, places, onSaved, onNotice }: QuickAddProps) {
   const { t } = useTranslation();
   const [kind, setKind] = useState<InventoryItemType>("other");
   const [siteId, setSiteId] = useState("");
+  const [name, setName] = useState("");
+  const [barcode, setBarcode] = useState("");
+  const [unit, setUnit] = useState("pcs");
+  const [productId, setProductId] = useState<number | null>(null);
+  const [lookup, setLookup] = useState<LookupState>({ kind: "idle" });
   const sitePlaces = places.filter((place) => String(place.site_id) === siteId);
+  const catalogBarcode = CATALOG_BARCODE.test(barcode);
+
+  function changeBarcode(value: string) {
+    setBarcode(value.replace(/\D/g, "").slice(0, 14));
+    setProductId(null);
+    setLookup({ kind: "idle" });
+  }
+
+  async function lookUpBarcode() {
+    if (!catalogBarcode) {
+      setLookup({ kind: "invalid" });
+      return;
+    }
+
+    setLookup({ kind: "looking" });
+    try {
+      const result = await api<BarcodeLookupResponse>("/barcode/lookup", token, {
+        method: "POST",
+        body: JSON.stringify({ barcode, local_only: true }),
+      });
+      if (result.found && result.product) {
+        setName(result.product.name);
+        if (result.product.default_unit) {
+          setUnit(result.product.default_unit);
+        }
+        const catalogType = itemTypeFromCategory(result.product.category);
+        if (catalogType) {
+          setKind(catalogType);
+        }
+        setProductId(typeof result.product.id === "number" ? result.product.id : null);
+        setLookup({ kind: "found", name: result.product.name });
+        return;
+      }
+      setProductId(null);
+      setLookup({ kind: "not_found" });
+    } catch (error) {
+      setLookup({
+        kind: "error",
+        message: error instanceof Error ? error.message : t("barcodeLookupFailed"),
+      });
+    }
+  }
+
+  function lookupMessage(): string | null {
+    switch (lookup.kind) {
+      case "idle":
+        return barcode ? t("barcodeLookupHint") : null;
+      case "invalid":
+        return t("barcodeLookupInvalid");
+      case "looking":
+        return t("barcodeLookingUp");
+      case "found":
+        return t("barcodeFound", { name: lookup.name });
+      case "not_found":
+        return t("barcodeNotFound");
+      case "error":
+        return lookup.message;
+    }
+  }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -222,12 +302,14 @@ function QuickAdd({ token, sites, places, onSaved, onNotice }: QuickAddProps) {
       await api("/inventory-items", token, {
         method: "POST",
         body: JSON.stringify({
-          display_name: data.get("name"),
+          display_name: name,
           item_type: kind,
           quantity: Number(data.get("quantity")),
-          unit: data.get("unit"),
+          unit,
           site_id: Number(data.get("site")),
           place_id: Number(data.get("place")),
+          ...(barcode ? { barcode } : {}),
+          ...(productId ? { product_id: productId } : {}),
           ...(kind === "medicine"
             ? { medicine_details: { expiration_date: data.get("expiration") } }
             : {}),
@@ -245,6 +327,12 @@ function QuickAdd({ token, sites, places, onSaved, onNotice }: QuickAddProps) {
       });
       formElement.reset();
       setSiteId("");
+      setName("");
+      setBarcode("");
+      setUnit("pcs");
+      setKind("other");
+      setProductId(null);
+      setLookup({ kind: "idle" });
       onSaved();
       onNotice(t("itemAdded"));
     } catch (error) {
@@ -261,9 +349,47 @@ function QuickAdd({ token, sites, places, onSaved, onNotice }: QuickAddProps) {
         </div>
         <PackagePlus size={20} />
       </div>
+      <div className="barcode-row">
+        <label className="barcode-caption" htmlFor="item-barcode">
+          {t("barcode")}
+        </label>
+        <input
+          id="item-barcode"
+          name="barcode"
+          inputMode="numeric"
+          autoComplete="off"
+          value={barcode}
+          onChange={(event) => changeBarcode(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              void lookUpBarcode();
+            }
+          }}
+          placeholder={t("barcodePlaceholder")}
+          aria-describedby="barcode-lookup-hint"
+        />
+        <button
+          type="button"
+          className="secondary-action"
+          onClick={() => void lookUpBarcode()}
+          disabled={lookup.kind === "looking"}
+        >
+          {t("lookUpBarcode")}
+        </button>
+      </div>
+      <p className="lookup-hint" id="barcode-lookup-hint" aria-live="polite">
+        {lookupMessage() ?? t("barcodeLookupHint")}
+      </p>
       <label>
         {t("itemName")}
-        <input name="name" placeholder={t("itemNamePlaceholder")} required />
+        <input
+          name="name"
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+          placeholder={t("itemNamePlaceholder")}
+          required
+        />
       </label>
       <div className="kind-selector">
         {(["other", "medicine", "equipment"] as const).map((value) => (
@@ -315,7 +441,12 @@ function QuickAdd({ token, sites, places, onSaved, onNotice }: QuickAddProps) {
         </label>
         <label>
           {t("unit")}
-          <input name="unit" defaultValue="pcs" required />
+          <input
+            name="unit"
+            value={unit}
+            onChange={(event) => setUnit(event.target.value)}
+            required
+          />
         </label>
       </div>
       {kind === "medicine" && (

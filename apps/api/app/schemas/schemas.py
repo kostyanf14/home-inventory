@@ -317,6 +317,8 @@ class InventoryItemRead(InventoryItemBase):
 # Barcode Lookup Schemas
 class BarcodeLookupRequest(BaseModel):
     barcode: StrictBarcode
+    # Step 1 of barcode support: the web UI looks in the caller's catalog only.
+    local_only: bool = False
 
 
 class BarcodeLookupResponse(BaseModel):

@@ -1,3 +1,5 @@
+import re
+
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import or_, select
@@ -21,6 +23,11 @@ router = APIRouter(prefix="/barcode", tags=["barcode"])
 OFF_PRODUCT_URL = "https://world.openfoodfacts.org/api/v0/product/{barcode}.json"
 # Open Food Facts payloads are small; refuse anything that looks like an abuse of the proxy.
 MAX_EXTERNAL_RESPONSE_BYTES = 512 * 1024
+CATALOG_BARCODE_RE = re.compile(r"^[0-9]{6,14}$")
+
+
+def is_catalog_barcode(value: str | None) -> bool:
+    return bool(value and CATALOG_BARCODE_RE.fullmatch(value))
 
 
 async def find_catalog_product(db: AsyncSession, user: User, barcode: str) -> Product | None:
@@ -34,6 +41,39 @@ async def find_catalog_product(db: AsyncSession, user: User, barcode: str) -> Pr
         .order_by(Product.user_id.is_(None))
     )
     return result.scalars().first()
+
+
+async def upsert_user_catalog_product(
+    db: AsyncSession,
+    user: User,
+    *,
+    barcode: str,
+    name: str,
+    default_unit: str | None = None,
+    category: str | None = None,
+) -> Product | None:
+    """Create a user-owned catalog row for a new 6-14 digit barcode.
+
+    Existing rows (the caller's, or the shared catalog) are returned unchanged.
+    """
+    if not is_catalog_barcode(barcode):
+        return None
+
+    existing = await find_catalog_product(db, user, barcode)
+    if existing:
+        return existing
+
+    product = Product(
+        name=name,
+        barcode=barcode,
+        default_unit=default_unit,
+        category=category,
+        source="user",
+        user_id=user.id,
+    )
+    db.add(product)
+    await db.flush()
+    return product
 
 
 async def fetch_external_product(barcode: str) -> dict | None:
@@ -99,6 +139,14 @@ async def lookup_barcode(
             source="local",
             product=ProductPreview.model_validate(local_product),
             message="Product found in local catalog",
+        )
+
+    if payload.local_only:
+        return BarcodeLookupResponse(
+            found=False,
+            source="not_found",
+            product=None,
+            message="Barcode not found in local catalog",
         )
 
     off_product = await fetch_external_product(barcode)

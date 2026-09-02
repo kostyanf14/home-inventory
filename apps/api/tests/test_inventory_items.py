@@ -207,3 +207,84 @@ async def test_photo_url_scheme_is_validated(client: AsyncClient, headers):
         headers=auth,
     )
     assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_creating_an_item_with_a_barcode_updates_the_local_catalog(
+    client: AsyncClient, headers
+):
+    auth = await headers("catalog-item@example.com")
+    site_id, place_id = await setup_location(client, auth)
+    barcode = "4006381333931"
+
+    created = await client.post(
+        "/api/v1/inventory-items",
+        json={
+            "site_id": site_id,
+            "place_id": place_id,
+            "display_name": "Olive oil",
+            "barcode": barcode,
+            "unit": "bottle",
+            "item_type": "equipment",
+            "equipment_details": {},
+        },
+        headers=auth,
+    )
+    assert created.status_code == 201
+    item = created.json()
+    assert item["barcode"] == barcode
+    assert item["product_id"] is not None
+
+    lookup = await client.post(
+        "/api/v1/barcode/lookup",
+        json={"barcode": barcode, "local_only": True},
+        headers=auth,
+    )
+    assert lookup.status_code == 200
+    data = lookup.json()
+    assert data["found"] is True
+    assert data["source"] == "local"
+    assert data["product"]["id"] == item["product_id"]
+    assert data["product"]["name"] == "Olive oil"
+    assert data["product"]["default_unit"] == "bottle"
+    assert data["product"]["category"] == "equipment"
+
+    again = await client.post(
+        "/api/v1/inventory-items",
+        json={
+            "site_id": site_id,
+            "place_id": place_id,
+            "display_name": "Olive oil (spare)",
+            "barcode": barcode,
+        },
+        headers=auth,
+    )
+    assert again.status_code == 201
+    assert again.json()["product_id"] == item["product_id"]
+
+    repeat_lookup = await client.post(
+        "/api/v1/barcode/lookup",
+        json={"barcode": barcode, "local_only": True},
+        headers=auth,
+    )
+    assert repeat_lookup.json()["product"]["name"] == "Olive oil"
+
+
+@pytest.mark.asyncio
+async def test_non_catalog_barcodes_are_stored_on_the_item_only(client: AsyncClient, headers):
+    auth = await headers("odd-barcode@example.com")
+    site_id, place_id = await setup_location(client, auth)
+
+    created = await client.post(
+        "/api/v1/inventory-items",
+        json={
+            "site_id": site_id,
+            "place_id": place_id,
+            "display_name": "Handmade label",
+            "barcode": "ABC-99",
+        },
+        headers=auth,
+    )
+    assert created.status_code == 201
+    assert created.json()["barcode"] == "ABC-99"
+    assert created.json()["product_id"] is None

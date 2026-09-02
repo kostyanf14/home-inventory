@@ -32,5 +32,22 @@ export type Item = {
   };
 };
 
+export type ProductPreview = {
+  id: number | null;
+  name: string;
+  brand?: string | null;
+  category?: string | null;
+  barcode: string;
+  default_unit?: string | null;
+  source: string;
+};
+
+export type BarcodeLookupResponse = {
+  found: boolean;
+  source: string;
+  product: ProductPreview | null;
+  message: string | null;
+};
+
 export type ActiveView = "inventory" | "locations";
 export type AuthMode = "login" | "register";

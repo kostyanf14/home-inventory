@@ -74,6 +74,14 @@ function App() {
     setNotice({ key });
   }
 
+  function openBarcodeLookup() {
+    setActiveView("inventory");
+    setNotice({ key: "barcodeReady" });
+    window.setTimeout(() => {
+      document.getElementById("item-barcode")?.focus();
+    }, 0);
+  }
+
   function focusAddForm() {
     const formId = activeView === "inventory" ? "quick-add-form" : "location-form";
     const form = document.getElementById(formId);
@@ -107,6 +115,7 @@ function App() {
         activeView={activeView}
         onViewChange={changeView}
         onNotice={showTranslatedNotice}
+        onScanLookup={openBarcodeLookup}
         onSignOut={signOut}
       />
       <section className="workspace" id="top">

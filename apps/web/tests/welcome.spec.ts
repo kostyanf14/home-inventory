@@ -28,7 +28,11 @@ test("switches the welcome screen to Ukrainian", async ({ page }) => {
 test("translates and clears navigation notices", async ({ page }) => {
   await page.addInitScript(() => {
     localStorage.setItem("inventory-token", "test-token");
+    localStorage.setItem("inventory-refresh-token", "test-refresh-token");
     localStorage.setItem("inventory-language", "en");
+  });
+  await page.route("**/api/v1/**", async (route) => {
+    await route.fulfill({ contentType: "application/json", body: "[]" });
   });
   await page.goto("/");
 
@@ -131,7 +135,7 @@ test("focuses the quick-add form from the header action", async ({ page }) => {
   await page.goto("/");
 
   await page.getByRole("button", { name: "Add item" }).click();
-  await expect(page.getByRole("textbox", { name: "Item name" })).toBeFocused();
+  await expect(page.getByLabel("Barcode")).toBeFocused();
   await expect(page.getByRole("status")).toBeHidden();
 });
 

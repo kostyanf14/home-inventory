@@ -119,3 +119,22 @@ async def test_external_image_url_scheme_is_filtered(client: AsyncClient, header
 async def test_lookup_requires_authentication(client: AsyncClient):
     resp = await client.post("/api/v1/barcode/lookup", json={"barcode": "123456789"})
     assert resp.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_local_only_lookup_skips_external_providers(client: AsyncClient, headers):
+    auth = await headers("barcode-local@example.com")
+
+    with patch("app.api.endpoints.barcode.fetch_external_product") as fetch:
+        resp = await client.post(
+            "/api/v1/barcode/lookup",
+            json={"barcode": "123456789", "local_only": True},
+            headers=auth,
+        )
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["found"] is False
+    assert data["source"] == "not_found"
+    assert data["message"] == "Barcode not found in local catalog"
+    fetch.assert_not_called()

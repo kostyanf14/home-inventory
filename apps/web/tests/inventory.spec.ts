@@ -182,3 +182,123 @@ test("shows the validation message returned by the API", async ({ page }) => {
   // FastAPI sends `detail` as a list; the user must not see "[object Object]".
   await expect(page.getByRole("status")).toContainText("quantity: Input should be greater than 0");
 });
+
+test("prefills the item name from a local barcode lookup", async ({ page }) => {
+  await signedIn(page);
+  let lookupBody: Record<string, unknown> | undefined;
+
+  await page.route("**/api/v1/**", async (route) => {
+    const request = route.request();
+    const path = new URL(request.url()).pathname;
+
+    if (path.endsWith("/barcode/lookup") && request.method() === "POST") {
+      lookupBody = request.postDataJSON() as Record<string, unknown>;
+      await route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({
+          found: true,
+          source: "local",
+          product: {
+            id: 9,
+            name: "Olive oil",
+            barcode: "4006381333931",
+            default_unit: "bottle",
+            category: "equipment",
+            source: "user",
+          },
+          message: "Product found in local catalog",
+        }),
+      });
+      return;
+    }
+
+    const body = path.endsWith("/sites") ? SITES : path.endsWith("/places") ? PLACES : ITEMS;
+    await route.fulfill({ contentType: "application/json", body: JSON.stringify(body) });
+  });
+  await page.goto("/");
+
+  await page.getByLabel("Barcode").fill("4006381333931");
+  await page.getByRole("button", { name: "Look up" }).click();
+
+  await expect(page.getByText("Found in your catalog: Olive oil")).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "Item name" })).toHaveValue("Olive oil");
+  await expect(page.getByLabel("Unit")).toHaveValue("bottle");
+  await expect(
+    page.locator("#quick-add-form").getByRole("button", { name: "Equipment" })
+  ).toHaveClass(/active/);
+  await expect.poll(() => lookupBody).toEqual({ barcode: "4006381333931", local_only: true });
+});
+
+test("saves a new barcode on the item so the local catalog can learn it", async ({ page }) => {
+  await signedIn(page);
+  let createdItem: Record<string, unknown> | undefined;
+
+  await page.route("**/api/v1/**", async (route) => {
+    const request = route.request();
+    const path = new URL(request.url()).pathname;
+
+    if (path.endsWith("/barcode/lookup") && request.method() === "POST") {
+      await route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({
+          found: false,
+          source: "not_found",
+          product: null,
+          message: "Barcode not found in local catalog",
+        }),
+      });
+      return;
+    }
+
+    if (path.endsWith("/inventory-items") && request.method() === "POST") {
+      createdItem = request.postDataJSON() as Record<string, unknown>;
+      await route.fulfill({
+        status: 201,
+        contentType: "application/json",
+        body: JSON.stringify({ id: 3, status: "active", ...createdItem }),
+      });
+      return;
+    }
+
+    const body = path.endsWith("/sites") ? SITES : path.endsWith("/places") ? PLACES : [];
+    await route.fulfill({ contentType: "application/json", body: JSON.stringify(body) });
+  });
+  await page.goto("/");
+
+  await page.getByLabel("Barcode").fill("5901234123457");
+  await page.getByRole("button", { name: "Look up" }).click();
+  await expect(page.getByText("Not in your catalog yet")).toBeVisible();
+
+  await page.getByRole("textbox", { name: "Item name" }).fill("Mustard");
+  await page.getByLabel("Site").selectOption("1");
+  await page.getByLabel("Places").selectOption("10");
+  await page.getByRole("button", { name: "Add to inventory" }).click();
+
+  await expect
+    .poll(() => createdItem)
+    .toMatchObject({
+      display_name: "Mustard",
+      barcode: "5901234123457",
+    });
+  await expect(page.getByRole("status")).toContainText("Item added to your inventory.");
+});
+
+test("keeps letters out of the barcode field and explains a short code", async ({ page }) => {
+  await signedIn(page);
+  await mockInventory(page);
+  await page.goto("/");
+
+  const barcode = page.getByLabel("Barcode");
+  const lookUp = page.getByRole("button", { name: "Look up" });
+  const barcodeBox = await barcode.boundingBox();
+  const lookUpBox = await lookUp.boundingBox();
+  expect(barcodeBox).toBeTruthy();
+  expect(lookUpBox).toBeTruthy();
+  expect(lookUpBox?.height).toBe(barcodeBox?.height);
+  expect(lookUpBox?.y).toBe(barcodeBox?.y);
+
+  await barcode.fill("12ab34");
+  await expect(barcode).toHaveValue("1234");
+  await lookUp.click();
+  await expect(page.getByText("Enter 6 to 14 digits to look up a barcode.")).toBeVisible();
+});
