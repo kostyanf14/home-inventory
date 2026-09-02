@@ -288,3 +288,25 @@ async def test_non_catalog_barcodes_are_stored_on_the_item_only(client: AsyncCli
     assert created.status_code == 201
     assert created.json()["barcode"] == "ABC-99"
     assert created.json()["product_id"] is None
+
+
+@pytest.mark.asyncio
+async def test_owner_can_delete_an_inventory_item(client: AsyncClient, headers):
+    auth = await headers("delete-item@example.com")
+    site_id, place_id = await setup_location(client, auth)
+
+    created = await client.post(
+        "/api/v1/inventory-items",
+        json={"site_id": site_id, "place_id": place_id, "display_name": "Spare bulb"},
+        headers=auth,
+    )
+    item_id = created.json()["id"]
+
+    deleted = await client.delete(f"/api/v1/inventory-items/{item_id}", headers=auth)
+    assert deleted.status_code == 204
+
+    missing = await client.get(f"/api/v1/inventory-items/{item_id}", headers=auth)
+    assert missing.status_code == 404
+
+    again = await client.delete(f"/api/v1/inventory-items/{item_id}", headers=auth)
+    assert again.status_code == 404

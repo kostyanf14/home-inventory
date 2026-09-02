@@ -60,19 +60,19 @@ test("filters the inventory table from the search box", async ({ page }) => {
   await mockInventory(page);
   await page.goto("/");
 
-  await expect(page.getByRole("cell", { name: /Drill/ })).toBeVisible();
-  await expect(page.getByRole("cell", { name: /Ibuprofen/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Delete Drill" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Delete Ibuprofen" })).toBeVisible();
 
   const search = page.getByRole("textbox", { name: "Search inventory" });
   await search.fill("ibupro");
-  await expect(page.getByRole("cell", { name: /Drill/ })).toBeHidden();
-  await expect(page.getByRole("cell", { name: /Ibuprofen/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Delete Drill" })).toBeHidden();
+  await expect(page.getByRole("button", { name: "Delete Ibuprofen" })).toBeVisible();
 
   // Barcodes and place names are searchable too.
   await search.fill("4006381333931");
-  await expect(page.getByRole("cell", { name: /Drill/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Delete Drill" })).toBeVisible();
   await search.fill("desk");
-  await expect(page.getByRole("cell", { name: /Ibuprofen/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Delete Ibuprofen" })).toBeVisible();
 
   await search.fill("nothing matches this");
   await expect(page.getByText("No items match your search")).toBeVisible();
@@ -130,7 +130,7 @@ test("refreshes an expired access token instead of emptying the workspace", asyn
   });
   await page.goto("/");
 
-  await expect(page.getByRole("cell", { name: /Drill/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Delete Drill" })).toBeVisible();
   expect(refreshCalls).toBeGreaterThan(0);
   await expect
     .poll(() => page.evaluate(() => localStorage.getItem("inventory-token")))
@@ -301,4 +301,67 @@ test("keeps letters out of the barcode field and explains a short code", async (
   await expect(barcode).toHaveValue("1234");
   await lookUp.click();
   await expect(page.getByText("Enter 6 to 14 digits to look up a barcode.")).toBeVisible();
+});
+
+test("removes an inventory item after confirmation", async ({ page }) => {
+  await signedIn(page);
+  let items = [...ITEMS];
+  let deletedId: number | undefined;
+
+  await page.route("**/api/v1/**", async (route) => {
+    const request = route.request();
+    const path = new URL(request.url()).pathname;
+
+    if (path.endsWith("/inventory-items/1") && request.method() === "DELETE") {
+      deletedId = 1;
+      items = items.filter((item) => item.id !== 1);
+      await route.fulfill({ status: 204 });
+      return;
+    }
+
+    const body = path.endsWith("/sites")
+      ? SITES
+      : path.endsWith("/places")
+        ? PLACES
+        : path.endsWith("/inventory-items")
+          ? items
+          : [];
+    await route.fulfill({ contentType: "application/json", body: JSON.stringify(body) });
+  });
+  await page.goto("/");
+
+  page.once("dialog", (dialog) => {
+    expect(dialog.message()).toContain("Drill");
+    void dialog.accept();
+  });
+  await page.getByRole("button", { name: "Delete Drill" }).click();
+
+  await expect.poll(() => deletedId).toBe(1);
+  await expect(page.getByRole("button", { name: "Delete Drill" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Delete Ibuprofen" })).toBeVisible();
+  await expect(page.getByRole("status")).toContainText("Item removed from your inventory.");
+});
+
+test("keeps the item when delete is cancelled", async ({ page }) => {
+  await signedIn(page);
+  let deleteCalls = 0;
+
+  await page.route("**/api/v1/**", async (route) => {
+    if (route.request().method() === "DELETE") {
+      deleteCalls += 1;
+      await route.fulfill({ status: 204 });
+      return;
+    }
+
+    const path = new URL(route.request().url()).pathname;
+    const body = path.endsWith("/sites") ? SITES : path.endsWith("/places") ? PLACES : ITEMS;
+    await route.fulfill({ contentType: "application/json", body: JSON.stringify(body) });
+  });
+  await page.goto("/");
+
+  page.once("dialog", (dialog) => dialog.dismiss());
+  await page.getByRole("button", { name: "Delete Ibuprofen" }).click();
+
+  await expect(page.getByRole("button", { name: "Delete Ibuprofen" })).toBeVisible();
+  expect(deleteCalls).toBe(0);
 });

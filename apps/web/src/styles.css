@@ -8,6 +8,17 @@
 * {
   box-sizing: border-box;
 }
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
 body {
   margin: 0;
   min-width: 320px;
@@ -542,6 +553,26 @@ small {
 }
 .location-actions button.danger:hover {
   background: #f7e3de;
+}
+.item-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+.item-actions button {
+  width: 31px;
+  height: 31px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #d6ddd3;
+  border-radius: 3px;
+  color: #9a4d43;
+  background: #fffefa;
+}
+.item-actions button:hover:not(:disabled) {
+  background: #f7e3de;
+}
+.item-actions button:disabled {
+  opacity: 0.6;
 }
 .location-icon {
   width: 39px;

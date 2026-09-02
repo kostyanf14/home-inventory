@@ -7,6 +7,7 @@ import {
   PackagePlus,
   Pill,
   Search,
+  Trash2,
   Wrench,
 } from "lucide-react";
 
@@ -103,7 +104,13 @@ export function InventoryView({
           {isLoading ? (
             <Loading />
           ) : visibleItems.length ? (
-            <ItemTable items={visibleItems} places={places} />
+            <ItemTable
+              items={visibleItems}
+              places={places}
+              token={token}
+              onSaved={onSaved}
+              onNotice={onNotice}
+            />
           ) : query || filter !== "all" ? (
             <Empty title={t("noMatchingItems")} detail={t("noMatchingItemsDetail")} />
           ) : (
@@ -142,10 +149,31 @@ function Stat({ icon, value, label, tone }: StatProps) {
 type ItemTableProps = {
   items: Item[];
   places: Place[];
+  token: string;
+  onSaved: () => void;
+  onNotice: (message: string) => void;
 };
 
-function ItemTable({ items, places }: ItemTableProps) {
+function ItemTable({ items, places, token, onSaved, onNotice }: ItemTableProps) {
   const { t } = useTranslation();
+  const [removingId, setRemovingId] = useState<number | null>(null);
+
+  async function remove(item: Item) {
+    if (!window.confirm(t("confirmDeleteItem", { name: item.display_name }))) {
+      return;
+    }
+
+    setRemovingId(item.id);
+    try {
+      await api(`/inventory-items/${item.id}`, token, { method: "DELETE" });
+      onSaved();
+      onNotice(t("itemDeleted"));
+    } catch (error) {
+      onNotice(error instanceof Error ? error.message : t("unableToDeleteItem"));
+    } finally {
+      setRemovingId(null);
+    }
+  }
 
   return (
     <div className="table-wrap">
@@ -156,6 +184,9 @@ function ItemTable({ items, places }: ItemTableProps) {
             <th>{t("location")}</th>
             <th>{t("quantity")}</th>
             <th>{t("status")}</th>
+            <th>
+              <span className="visually-hidden">{t("deleteItem")}</span>
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -190,6 +221,20 @@ function ItemTable({ items, places }: ItemTableProps) {
               </td>
               <td>
                 <span className="status">{item.status}</span>
+              </td>
+              <td>
+                <div className="item-actions">
+                  <button
+                    type="button"
+                    className="danger"
+                    aria-label={t("deleteItemNamed", { name: item.display_name })}
+                    title={t("deleteItemNamed", { name: item.display_name })}
+                    disabled={removingId === item.id}
+                    onClick={() => void remove(item)}
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
               </td>
             </tr>
           ))}
