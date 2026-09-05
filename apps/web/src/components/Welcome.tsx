@@ -93,6 +93,11 @@ export function Welcome({
           <em>{t("knowWhere")}</em>
         </h1>
         <p className="intro">{t("welcomeIntro")}</p>
+        <ul className="welcome-pills">
+          <li>{t("medicines")}</li>
+          <li>{t("equipment")}</li>
+          <li>{t("scanLookup")}</li>
+        </ul>
         <button className="welcome-cta" onClick={onStart}>
           {t("startInventory")} <ArrowRight size={18} />
         </button>

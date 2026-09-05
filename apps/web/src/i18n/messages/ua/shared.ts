@@ -9,6 +9,8 @@ export const shared = {
   locations: "Локації",
   scanLookup: "Пошук за кодом",
   reminders: "Нагадування",
+  more: "Ще",
+  closeMore: "Закрити меню",
   signOut: "Вийти",
   barcodeReady: "Пошук за штрихкодом доступний під час додавання речі.",
   remindersComing: "Перегляд нагадувань з'явиться разом з модулем API.",

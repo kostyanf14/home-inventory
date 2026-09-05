@@ -172,7 +172,7 @@ export function MedicinesView({
         <Loading />
       ) : visible.length ? (
         <div className="table-wrap">
-          <table>
+          <table className="data-table">
             <thead>
               <tr>
                 <th>{t("item")}</th>
@@ -181,9 +181,6 @@ export function MedicinesView({
                 <th>{t("expirationDate")}</th>
                 <th>
                   <span className="visually-hidden">{t("useOne")}</span>
-                </th>
-                <th>
-                  <span className="visually-hidden">{t("deleteItem")}</span>
                 </th>
               </tr>
             </thead>
@@ -194,18 +191,24 @@ export function MedicinesView({
                 return (
                   <tr key={item.id} className={expired ? "expired-row" : undefined}>
                     <td>
-                      <span className="item-icon medicine">
-                        <Pill size={16} />
-                      </span>
-                      <strong>{item.display_name}</strong>
-                      {expired && <small>{t("expired")}</small>}
+                      <div className="item-cell">
+                        <span className="item-icon medicine">
+                          <Pill size={16} />
+                        </span>
+                        <div>
+                          <strong>{item.display_name}</strong>
+                          {expired && <small>{t("expired")}</small>}
+                        </div>
+                      </div>
                     </td>
-                    <td>{path || t("unassigned")}</td>
-                    <td>
+                    <td data-label={t("location")}>{path || t("unassigned")}</td>
+                    <td data-label={t("quantity")}>
                       {item.quantity} {item.unit}
                     </td>
-                    <td>{item.medicine_details?.expiration_date ?? "—"}</td>
-                    <td>
+                    <td data-label={t("expirationDate")}>
+                      {item.medicine_details?.expiration_date ?? "—"}
+                    </td>
+                    <td className="actions-cell">
                       <div className="medicine-row-actions">
                         <button
                           type="button"

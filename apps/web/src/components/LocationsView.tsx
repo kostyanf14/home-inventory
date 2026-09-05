@@ -241,7 +241,7 @@ function LocationRow({
   return (
     <article className={`location-row ${kind === "place" ? "place-row" : ""}`}>
       <span className="location-icon">{icon}</span>
-      <div>
+      <div className="location-copy">
         <h3>{location.name}</h3>
         <p>{secondary}</p>
       </div>

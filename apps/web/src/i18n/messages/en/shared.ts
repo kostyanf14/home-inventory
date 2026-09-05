@@ -9,6 +9,8 @@ export const shared = {
   locations: "Locations",
   scanLookup: "Scan lookup",
   reminders: "Reminders",
+  more: "More",
+  closeMore: "Close menu",
   signOut: "Sign out",
   barcodeReady: "Barcode lookup is ready when adding an item.",
   remindersComing: "Reminder views arrive with the API reminder module.",

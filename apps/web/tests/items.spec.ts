@@ -155,13 +155,15 @@ test("edits every core field on an existing item", async ({ page }) => {
   await page.getByLabel("Serial number").fill("DR-99");
   await page.getByRole("button", { name: "Save changes" }).click();
 
-  await expect.poll(() => patched).toMatchObject({
-    display_name: "Cordless drill",
-    status: "missing",
-    notes: "Moved to the shed",
-    item_type: "equipment",
-    equipment_details: { serial_number: "DR-99" },
-  });
+  await expect
+    .poll(() => patched)
+    .toMatchObject({
+      display_name: "Cordless drill",
+      status: "missing",
+      notes: "Moved to the shed",
+      item_type: "equipment",
+      equipment_details: { serial_number: "DR-99" },
+    });
   await expect(page.getByRole("status")).toContainText("Item saved.");
 });
 

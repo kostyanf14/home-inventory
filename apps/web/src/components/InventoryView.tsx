@@ -183,7 +183,7 @@ function ItemTable({ items, places, sites, token, onSaved, onNotice, onEditItem 
 
   return (
     <div className="table-wrap">
-      <table>
+      <table className="data-table">
         <thead>
           <tr>
             <th>{t("item")}</th>
@@ -199,36 +199,42 @@ function ItemTable({ items, places, sites, token, onSaved, onNotice, onEditItem 
           {items.map((item) => (
             <tr key={item.id}>
               <td>
-                <span className={`item-icon ${item.item_type}`}>
-                  {item.item_type === "medicine" ? (
-                    <Pill size={16} />
-                  ) : item.item_type === "equipment" ? (
-                    <Wrench size={16} />
-                  ) : (
-                    <Archive size={16} />
-                  )}
-                </span>
-                <strong>{item.display_name}</strong>
-                {item.barcode && <small>{item.barcode}</small>}
-                {item.medicine_details && (
-                  <small>
-                    {t("expires")} {item.medicine_details.expiration_date}
-                  </small>
-                )}
-                {item.equipment_details?.warranty_expiration_date && (
-                  <small>
-                    {t("warrantyEnds")} {item.equipment_details.warranty_expiration_date}
-                  </small>
-                )}
+                <div className="item-cell">
+                  <span className={`item-icon ${item.item_type}`}>
+                    {item.item_type === "medicine" ? (
+                      <Pill size={16} />
+                    ) : item.item_type === "equipment" ? (
+                      <Wrench size={16} />
+                    ) : (
+                      <Archive size={16} />
+                    )}
+                  </span>
+                  <div>
+                    <strong>{item.display_name}</strong>
+                    {item.barcode && <small>{item.barcode}</small>}
+                    {item.medicine_details && (
+                      <small>
+                        {t("expires")} {item.medicine_details.expiration_date}
+                      </small>
+                    )}
+                    {item.equipment_details?.warranty_expiration_date && (
+                      <small>
+                        {t("warrantyEnds")} {item.equipment_details.warranty_expiration_date}
+                      </small>
+                    )}
+                  </div>
+                </div>
               </td>
-              <td>{locationPath(item, places, sites) || t("unassigned")}</td>
-              <td>
+              <td data-label={t("location")}>
+                {locationPath(item, places, sites) || t("unassigned")}
+              </td>
+              <td data-label={t("quantity")}>
                 {item.quantity} {item.unit}
               </td>
-              <td>
+              <td data-label={t("status")}>
                 <span className="status">{item.status}</span>
               </td>
-              <td>
+              <td className="actions-cell">
                 <div className="item-actions">
                   <button
                     type="button"

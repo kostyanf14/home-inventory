@@ -12,7 +12,13 @@ import { MedicinesView } from "./components/MedicinesView";
 import { Welcome } from "./components/Welcome";
 import { useTranslation } from "./i18n";
 import type { TranslationKey } from "./i18n";
-import { canonicalPath, pathFromRoute, routeFromPath, type AppRoute, type ItemEditorId } from "./routes";
+import {
+  canonicalPath,
+  pathFromRoute,
+  routeFromPath,
+  type AppRoute,
+  type ItemEditorId,
+} from "./routes";
 import type { ActiveView, AuthMode, Item, Place, Site } from "./types";
 
 type Notice = { key: TranslationKey } | { message: string };
@@ -166,7 +172,11 @@ function App() {
           ? t("manageItems")
           : t("yourLocations");
   const actionLabel =
-    activeView === "locations" ? t("addLocation") : activeView === "items" ? t("newItem") : t("addItem");
+    activeView === "locations"
+      ? t("addLocation")
+      : activeView === "items"
+        ? t("newItem")
+        : t("addItem");
 
   return (
     <main className="app-shell">
@@ -180,13 +190,13 @@ function App() {
       />
       <section className="workspace" id="top">
         <header className="topbar">
-          <div>
+          <div className="topbar-copy">
             <p className="eyebrow">{t("homeInventory")}</p>
             <h1>{heading}</h1>
           </div>
           <button className="primary-action" onClick={focusAddForm}>
             <CirclePlus size={18} />
-            {actionLabel}
+            <span>{actionLabel}</span>
           </button>
         </header>
         {loadError && (

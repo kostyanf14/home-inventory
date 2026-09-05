@@ -263,7 +263,7 @@ export function ItemsView({
           <Loading />
         ) : items.length ? (
           <div className="table-wrap">
-            <table>
+            <table className="data-table">
               <thead>
                 <tr>
                   <th>{t("item")}</th>
@@ -284,11 +284,13 @@ export function ItemsView({
                       <strong>{item.display_name}</strong>
                       <small>{t(item.item_type)}</small>
                     </td>
-                    <td>{locationPath(item, places, sites) || t("unassigned")}</td>
-                    <td>
+                    <td data-label={t("location")}>
+                      {locationPath(item, places, sites) || t("unassigned")}
+                    </td>
+                    <td data-label={t("status")}>
                       <span className="status">{item.status}</span>
                     </td>
-                    <td>
+                    <td className="actions-cell">
                       <div className="item-actions">
                         <button
                           type="button"
@@ -310,7 +312,11 @@ export function ItemsView({
           <Empty title={t("noItemsToEdit")} detail={t("noItemsToEditDetail")} />
         )}
       </section>
-      <form className="panel quick-add" id="item-editor-form" onSubmit={(event) => void submit(event)}>
+      <form
+        className="panel quick-add"
+        id="item-editor-form"
+        onSubmit={(event) => void submit(event)}
+      >
         <div className="panel-heading">
           <div>
             <h2>{formTitle}</h2>
@@ -360,7 +366,11 @@ export function ItemsView({
         </label>
         <label>
           {t("site")}
-          <select required value={editor.siteId} onChange={(event) => changeSite(event.target.value)}>
+          <select
+            required
+            value={editor.siteId}
+            onChange={(event) => changeSite(event.target.value)}
+          >
             <option value="" disabled>
               {t("selectSite")}
             </option>
