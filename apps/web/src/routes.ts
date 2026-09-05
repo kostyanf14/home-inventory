@@ -10,6 +10,7 @@ export type AppRoute = {
 const VIEW_PATHS: Record<ActiveView, string> = {
   inventory: "/",
   medicines: "/medicines",
+  foods: "/foods",
   locations: "/locations",
   items: "/items",
 };
@@ -35,6 +36,9 @@ export function routeFromPath(pathname: string): AppRoute {
   const path = pathname.replace(/\/+$/, "") || "/";
   if (path === "/medicines") {
     return { view: "medicines" };
+  }
+  if (path === "/foods") {
+    return { view: "foods" };
   }
   if (path === "/locations") {
     return { view: "locations" };

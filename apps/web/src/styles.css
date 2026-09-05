@@ -253,7 +253,7 @@ textarea:focus-visible {
 
 .bottom-nav {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   position: fixed;
   left: 0;
   right: 0;
@@ -379,7 +379,7 @@ textarea:focus-visible {
 .stat-grid {
   margin: 28px 0 24px;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 12px;
 }
 
@@ -755,6 +755,11 @@ td strong {
   color: #9a752b;
 }
 
+.item-icon.food {
+  background: #f8ddd2;
+  color: #a85239;
+}
+
 small {
   display: block;
   margin-top: 4px;
@@ -827,7 +832,7 @@ small {
 
 .kind-selector {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   border: 1px solid var(--line);
   padding: 4px;
   gap: 4px;

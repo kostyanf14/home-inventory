@@ -1,7 +1,7 @@
-export type InventoryItemType = "medicine" | "equipment" | "other";
+export type InventoryItemType = "medicine" | "equipment" | "food" | "other";
 export type ItemStatus = "active" | "used" | "disposed" | "missing";
 
-export const ITEM_TYPES = ["medicine", "equipment", "other"] as const;
+export const ITEM_TYPES = ["other", "medicine", "food", "equipment"] as const;
 export const ITEM_STATUSES: ItemStatus[] = ["active", "used", "disposed", "missing"];
 
 export type Site = {
@@ -34,6 +34,11 @@ export type EquipmentDetails = {
   receipt_file_url?: string | null;
 };
 
+export type FoodDetails = {
+  expiration_date: string;
+  form?: string | null;
+};
+
 export type Item = {
   id: number;
   display_name: string;
@@ -49,6 +54,7 @@ export type Item = {
   photo_url?: string | null;
   medicine_details?: MedicineDetails | null;
   equipment_details?: EquipmentDetails | null;
+  food_details?: FoodDetails | null;
 };
 
 export type ProductPreview = {
@@ -68,5 +74,5 @@ export type BarcodeLookupResponse = {
   message: string | null;
 };
 
-export type ActiveView = "inventory" | "locations" | "medicines" | "items";
+export type ActiveView = "inventory" | "locations" | "medicines" | "foods" | "items";
 export type AuthMode = "login" | "register";

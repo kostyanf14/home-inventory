@@ -95,9 +95,10 @@ function editorFromItem(item: Item): EditorState {
     productId: item.product_id ? String(item.product_id) : "",
     notes: item.notes ?? "",
     photoUrl: item.photo_url ?? "",
-    expirationDate: item.medicine_details?.expiration_date ?? "",
+    expirationDate:
+      item.medicine_details?.expiration_date ?? item.food_details?.expiration_date ?? "",
     dosage: item.medicine_details?.dosage ?? "",
-    form: item.medicine_details?.form ?? "",
+    form: item.medicine_details?.form ?? item.food_details?.form ?? "",
     requiresPrescription: Boolean(item.medicine_details?.requires_prescription),
     batchNumber: item.medicine_details?.batch_number ?? "",
     serialNumber: item.equipment_details?.serial_number ?? "",
@@ -190,6 +191,12 @@ export function ItemsView({
         model_number: optionalText(editor.modelNumber),
         vendor_name: optionalText(editor.vendorName),
         receipt_file_url: optionalText(editor.receiptFileUrl),
+      };
+    }
+    if (editor.itemType === "food") {
+      body.food_details = {
+        expiration_date: editor.expirationDate,
+        form: optionalText(editor.form),
       };
     }
     return body;
@@ -496,6 +503,27 @@ export function ItemsView({
                 onChange={(event) => patchEditor("requiresPrescription", event.target.checked)}
               />
               {t("requiresPrescription")}
+            </label>
+          </>
+        )}
+        {editor.itemType === "food" && (
+          <>
+            <label>
+              {t("expirationDate")}
+              <input
+                type="date"
+                required
+                value={editor.expirationDate}
+                onChange={(event) => patchEditor("expirationDate", event.target.value)}
+              />
+            </label>
+            <label>
+              {t("form")}
+              <input
+                value={editor.form}
+                onChange={(event) => patchEditor("form", event.target.value)}
+                placeholder={t("foodFormPlaceholder")}
+              />
             </label>
           </>
         )}

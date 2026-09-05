@@ -8,7 +8,7 @@ import { AppSidebar } from "./components/AppSidebar";
 import { InventoryView } from "./components/InventoryView";
 import { ItemsView } from "./components/ItemsView";
 import { LocationsView } from "./components/LocationsView";
-import { MedicinesView } from "./components/MedicinesView";
+import { FoodsView, MedicinesView } from "./components/MedicinesView";
 import { Welcome } from "./components/Welcome";
 import { useTranslation } from "./i18n";
 import type { TranslationKey } from "./i18n";
@@ -120,7 +120,7 @@ function App() {
   }
 
   function focusAddForm() {
-    if (activeView === "medicines") {
+    if (activeView === "medicines" || activeView === "foods") {
       go({ view: "inventory" });
       window.setTimeout(() => {
         const form = document.getElementById("quick-add-form");
@@ -168,9 +168,11 @@ function App() {
       ? t("everythingInPlace")
       : activeView === "medicines"
         ? t("medicineCabinet")
-        : activeView === "items"
-          ? t("manageItems")
-          : t("yourLocations");
+        : activeView === "foods"
+          ? t("foodCabinet")
+          : activeView === "items"
+            ? t("manageItems")
+            : t("yourLocations");
   const actionLabel =
     activeView === "locations"
       ? t("addLocation")
@@ -225,6 +227,16 @@ function App() {
           />
         ) : activeView === "medicines" ? (
           <MedicinesView
+            isLoading={isLoading}
+            items={items.data ?? []}
+            places={places.data ?? []}
+            sites={sites.data ?? []}
+            token={token}
+            onSaved={invalidateInventory}
+            onNotice={showNotice}
+          />
+        ) : activeView === "foods" ? (
+          <FoodsView
             isLoading={isLoading}
             items={items.data ?? []}
             places={places.data ?? []}

@@ -213,6 +213,21 @@ class EquipmentDetailRead(EquipmentDetailBase):
     model_config = ConfigDict(from_attributes=True)
 
 
+class FoodDetailBase(BaseModel):
+    expiration_date: date
+    form: str | None = Field(default=None, max_length=100)
+
+
+class FoodDetailCreate(FoodDetailBase):
+    pass
+
+
+class FoodDetailRead(FoodDetailBase):
+    inventory_item_id: int
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 # Product Schemas
 class ProductBase(UrlFieldsMixin):
     name: ShortText
@@ -253,12 +268,15 @@ def require_details_for_type(
     item_type: ItemType,
     medicine_details: "MedicineDetailCreate | None",
     equipment_details: "EquipmentDetailCreate | None",
+    food_details: "FoodDetailCreate | None",
 ) -> None:
     """Reject detail blocks that do not belong to the item's type."""
     if medicine_details is not None and item_type != ItemType.MEDICINE:
         raise ValueError("medicine_details is only allowed when item_type is medicine")
     if equipment_details is not None and item_type != ItemType.EQUIPMENT:
         raise ValueError("equipment_details is only allowed when item_type is equipment")
+    if food_details is not None and item_type != ItemType.FOOD:
+        raise ValueError("food_details is only allowed when item_type is food")
 
 
 # Inventory Item Schemas
@@ -279,12 +297,17 @@ class InventoryItemBase(UrlFieldsMixin):
 class InventoryItemCreate(InventoryItemBase):
     medicine_details: MedicineDetailCreate | None = None
     equipment_details: EquipmentDetailCreate | None = None
+    food_details: FoodDetailCreate | None = None
 
     @model_validator(mode="after")
     def check_type_details(self):
-        require_details_for_type(self.item_type, self.medicine_details, self.equipment_details)
+        require_details_for_type(
+            self.item_type, self.medicine_details, self.equipment_details, self.food_details
+        )
         if self.item_type == ItemType.MEDICINE and self.medicine_details is None:
             raise ValueError("medicine_details with an expiration_date is required for medicine")
+        if self.item_type == ItemType.FOOD and self.food_details is None:
+            raise ValueError("food_details with an expiration_date is required for food")
         return self
 
 
@@ -302,6 +325,7 @@ class InventoryItemUpdate(UrlFieldsMixin):
     photo_url: str | None = None
     medicine_details: MedicineDetailCreate | None = None
     equipment_details: EquipmentDetailCreate | None = None
+    food_details: FoodDetailCreate | None = None
 
 
 class InventoryItemRead(InventoryItemBase):
@@ -311,6 +335,7 @@ class InventoryItemRead(InventoryItemBase):
     updated_at: datetime
     medicine_details: MedicineDetailRead | None = None
     equipment_details: EquipmentDetailRead | None = None
+    food_details: FoodDetailRead | None = None
 
     model_config = ConfigDict(from_attributes=True)
 

@@ -33,6 +33,7 @@ def as_utc(value: datetime | None) -> datetime | None:
 class ItemType(enum.StrEnum):
     MEDICINE = "medicine"
     EQUIPMENT = "equipment"
+    FOOD = "food"
     OTHER = "other"
 
 
@@ -176,6 +177,12 @@ class InventoryItem(Base):
         back_populates="inventory_item",
         cascade="all, delete-orphan",
     )
+    food_details = relationship(
+        "FoodDetail",
+        uselist=False,
+        back_populates="inventory_item",
+        cascade="all, delete-orphan",
+    )
 
 
 class MedicineDetail(Base):
@@ -203,3 +210,13 @@ class EquipmentDetail(Base):
     receipt_file_url = Column(String, nullable=True)
 
     inventory_item = relationship("InventoryItem", back_populates="equipment_details")
+
+
+class FoodDetail(Base):
+    __tablename__ = "food_details"
+
+    inventory_item_id = Column(Integer, ForeignKey("inventory_items.id"), primary_key=True)
+    expiration_date = Column(Date, nullable=False)
+    form = Column(String, nullable=True)  # canned, jar, dry, frozen, etc.
+
+    inventory_item = relationship("InventoryItem", back_populates="food_details")

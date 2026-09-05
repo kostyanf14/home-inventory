@@ -2,6 +2,7 @@ import {
   Archive,
   Barcode,
   Boxes,
+  CookingPot,
   MapPin,
   MoreHorizontal,
   Pill,
@@ -167,6 +168,7 @@ export function AppSidebar({
   const primaryLinks: { view: ActiveView; icon: ReactNode; label: string }[] = [
     { view: "inventory", icon: <Boxes size={20} />, label: t("inventory") },
     { view: "medicines", icon: <Pill size={20} />, label: t("medicines") },
+    { view: "foods", icon: <CookingPot size={20} />, label: t("food") },
     { view: "locations", icon: <MapPin size={20} />, label: t("locations") },
     { view: "items", icon: <SquarePen size={20} />, label: t("items") },
   ];

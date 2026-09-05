@@ -8,6 +8,7 @@ from app.api.endpoints.barcode import upsert_user_catalog_product
 from app.db.session import get_db
 from app.models.models import (
     EquipmentDetail,
+    FoodDetail,
     InventoryItem,
     ItemType,
     MedicineDetail,
@@ -67,6 +68,7 @@ def item_query(*, with_details: bool = True):
         query = query.options(
             selectinload(InventoryItem.medicine_details),
             selectinload(InventoryItem.equipment_details),
+            selectinload(InventoryItem.food_details),
         )
     return query
 
@@ -103,7 +105,9 @@ async def create_inventory_item(
     await assert_location_owned(db, current_user, item_in.site_id, item_in.place_id)
     await assert_product_available(db, current_user, item_in.product_id)
 
-    item_data = item_in.model_dump(exclude={"medicine_details", "equipment_details"})
+    item_data = item_in.model_dump(
+        exclude={"medicine_details", "equipment_details", "food_details"}
+    )
     if item_in.barcode:
         catalog_product = await upsert_user_catalog_product(
             db,
@@ -121,6 +125,8 @@ async def create_inventory_item(
         item.medicine_details = MedicineDetail(**item_in.medicine_details.model_dump())
     if item_in.equipment_details:
         item.equipment_details = EquipmentDetail(**item_in.equipment_details.model_dump())
+    if item_in.food_details:
+        item.food_details = FoodDetail(**item_in.food_details.model_dump())
 
     db.add(item)
     await db.commit()
@@ -158,7 +164,7 @@ async def update_inventory_item(
         raise HTTPException(status_code=404, detail="Inventory item not found")
 
     update_data = item_in.model_dump(
-        exclude_unset=True, exclude={"medicine_details", "equipment_details"}
+        exclude_unset=True, exclude={"medicine_details", "equipment_details", "food_details"}
     )
 
     # Relocating must land inside the caller's own site/place graph, exactly as on create.
@@ -174,7 +180,9 @@ async def update_inventory_item(
 
     next_type = update_data.get("item_type", item.item_type)
     try:
-        require_details_for_type(next_type, item_in.medicine_details, item_in.equipment_details)
+        require_details_for_type(
+            next_type, item_in.medicine_details, item_in.equipment_details, item_in.food_details
+        )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -195,10 +203,20 @@ async def update_inventory_item(
     elif item.item_type != ItemType.EQUIPMENT:
         item.equipment_details = None
 
+    if item_in.food_details:
+        item.food_details = merge_details(item.food_details, item_in.food_details, FoodDetail)
+    elif item.item_type != ItemType.FOOD:
+        item.food_details = None
+
     if item.item_type == ItemType.MEDICINE and item.medicine_details is None:
         raise HTTPException(
             status_code=400,
             detail="medicine_details with an expiration_date is required for medicine",
+        )
+    if item.item_type == ItemType.FOOD and item.food_details is None:
+        raise HTTPException(
+            status_code=400,
+            detail="food_details with an expiration_date is required for food",
         )
 
     if item.barcode:
@@ -223,15 +241,15 @@ async def update_inventory_item(
 async def use_inventory_item(
     item_id: int, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ):
-    """Subtract one unit from a medicine. Other item types are rejected."""
+    """Subtract one unit from medicine or food. Other item types are rejected."""
     result = await db.execute(
         item_query().where(InventoryItem.id == item_id, InventoryItem.user_id == current_user.id)
     )
     item = result.scalars().first()
     if not item:
         raise HTTPException(status_code=404, detail="Inventory item not found")
-    if item.item_type != ItemType.MEDICINE:
-        raise HTTPException(status_code=400, detail="Only medicine can be used this way")
+    if item.item_type not in {ItemType.MEDICINE, ItemType.FOOD}:
+        raise HTTPException(status_code=400, detail="Only medicine and food can be used this way")
     if item.quantity < 1:
         raise HTTPException(status_code=400, detail="Not enough quantity to use 1")
 

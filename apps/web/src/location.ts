@@ -26,6 +26,13 @@ export function todayIsoDate(now = new Date()): string {
 }
 
 export function isExpiredMedicine(item: Item, today = todayIsoDate()): boolean {
-  const expiration = item.medicine_details?.expiration_date;
+  return isExpiredConsumable(item, today);
+}
+
+export function isExpiredConsumable(item: Item, today = todayIsoDate()): boolean {
+  const expiration =
+    item.item_type === "food"
+      ? item.food_details?.expiration_date
+      : item.medicine_details?.expiration_date;
   return Boolean(expiration && expiration < today);
 }

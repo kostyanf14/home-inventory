@@ -95,6 +95,7 @@ export function Welcome({
         <p className="intro">{t("welcomeIntro")}</p>
         <ul className="welcome-pills">
           <li>{t("medicines")}</li>
+          <li>{t("food")}</li>
           <li>{t("equipment")}</li>
           <li>{t("scanLookup")}</li>
         </ul>

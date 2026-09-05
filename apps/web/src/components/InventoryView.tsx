@@ -3,6 +3,7 @@ import {
   Archive,
   Boxes,
   CirclePlus,
+  CookingPot,
   MapPin,
   PackagePlus,
   Pencil,
@@ -15,11 +16,17 @@ import {
 import { api } from "../api";
 import { useTranslation } from "../i18n";
 import { locationPath } from "../location";
-import type { BarcodeLookupResponse, InventoryItemType, Item, Place, Site } from "../types";
+import {
+  ITEM_TYPES,
+  type BarcodeLookupResponse,
+  type InventoryItemType,
+  type Item,
+  type Place,
+  type Site,
+} from "../types";
 import { Empty, Loading } from "./Feedback";
 
 const CATALOG_BARCODE = /^[0-9]{6,14}$/;
-const ITEM_TYPES = ["medicine", "equipment", "other"] as const;
 
 function itemTypeFromCategory(category: string | null | undefined): InventoryItemType | null {
   return ITEM_TYPES.find((type) => type === category) ?? null;
@@ -64,6 +71,7 @@ export function InventoryView({
     );
   });
   const medicineCount = items.filter((item) => item.item_type === "medicine").length;
+  const foodCount = items.filter((item) => item.item_type === "food").length;
   const equipmentCount = items.filter((item) => item.item_type === "equipment").length;
 
   return (
@@ -71,8 +79,9 @@ export function InventoryView({
       <section className="stat-grid" aria-label="Inventory overview">
         <Stat icon={<Boxes />} value={String(items.length)} label={t("totalItems")} tone="sun" />
         <Stat icon={<Pill />} value={String(medicineCount)} label={t("medicines")} tone="mint" />
+        <Stat icon={<CookingPot />} value={String(foodCount)} label={t("food")} tone="coral" />
         <Stat icon={<Wrench />} value={String(equipmentCount)} label={t("equipment")} tone="blue" />
-        <Stat icon={<MapPin />} value={String(sites.length)} label={t("sites")} tone="coral" />
+        <Stat icon={<MapPin />} value={String(sites.length)} label={t("sites")} tone="sun" />
       </section>
       <section className="content-grid">
         <section className="panel inventory-panel">
@@ -93,7 +102,7 @@ export function InventoryView({
           </div>
           <div className="filter-row">
             <span>{t("show")}</span>
-            {(["all", "medicine", "equipment", "other"] as const).map((type) => (
+            {(["all", ...ITEM_TYPES] as const).map((type) => (
               <button
                 key={type}
                 onClick={() => setFilter(type)}
@@ -205,6 +214,8 @@ function ItemTable({ items, places, sites, token, onSaved, onNotice, onEditItem 
                       <Pill size={16} />
                     ) : item.item_type === "equipment" ? (
                       <Wrench size={16} />
+                    ) : item.item_type === "food" ? (
+                      <CookingPot size={16} />
                     ) : (
                       <Archive size={16} />
                     )}
@@ -215,6 +226,11 @@ function ItemTable({ items, places, sites, token, onSaved, onNotice, onEditItem 
                     {item.medicine_details && (
                       <small>
                         {t("expires")} {item.medicine_details.expiration_date}
+                      </small>
+                    )}
+                    {item.food_details && (
+                      <small>
+                        {t("expires")} {item.food_details.expiration_date}
                       </small>
                     )}
                     {item.equipment_details?.warranty_expiration_date && (
@@ -379,6 +395,7 @@ function QuickAdd({ token, sites, places, onSaved, onNotice }: QuickAddProps) {
           ...(kind === "medicine"
             ? { medicine_details: { expiration_date: data.get("expiration") } }
             : {}),
+          ...(kind === "food" ? { food_details: { expiration_date: data.get("expiration") } } : {}),
           ...(kind === "equipment"
             ? {
                 equipment_details: {
@@ -458,7 +475,7 @@ function QuickAdd({ token, sites, places, onSaved, onNotice }: QuickAddProps) {
         />
       </label>
       <div className="kind-selector">
-        {(["other", "medicine", "equipment"] as const).map((value) => (
+        {ITEM_TYPES.map((value) => (
           <button
             type="button"
             className={kind === value ? "active" : ""}
@@ -515,7 +532,7 @@ function QuickAdd({ token, sites, places, onSaved, onNotice }: QuickAddProps) {
           />
         </label>
       </div>
-      {kind === "medicine" && (
+      {(kind === "medicine" || kind === "food") && (
         <label>
           {t("expirationDate")}
           <input name="expiration" type="date" required />

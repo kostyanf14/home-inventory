@@ -1,13 +1,16 @@
 import { useMemo, useState } from "react";
-import { Pill, Trash2 } from "lucide-react";
+import { CookingPot, Pill, Trash2 } from "lucide-react";
 
 import { api } from "../api";
 import { useTranslation } from "../i18n";
-import { isExpiredMedicine, locationKey, locationPath, todayIsoDate } from "../location";
-import type { Item, Place, Site } from "../types";
+import { isExpiredConsumable, locationKey, locationPath, todayIsoDate } from "../location";
+import type { InventoryItemType, Item, Place, Site } from "../types";
 import { Empty, Loading } from "./Feedback";
 
-type MedicinesViewProps = {
+type ConsumableKind = Extract<InventoryItemType, "medicine" | "food">;
+
+type ConsumablesViewProps = {
+  kind: ConsumableKind;
   isLoading: boolean;
   items: Item[];
   places: Place[];
@@ -17,7 +20,16 @@ type MedicinesViewProps = {
   onNotice: (message: string) => void;
 };
 
-export function MedicinesView({
+export function MedicinesView(props: Omit<ConsumablesViewProps, "kind">) {
+  return <ConsumablesView kind="medicine" {...props} />;
+}
+
+export function FoodsView(props: Omit<ConsumablesViewProps, "kind">) {
+  return <ConsumablesView kind="food" {...props} />;
+}
+
+function ConsumablesView({
+  kind,
   isLoading,
   items,
   places,
@@ -25,7 +37,7 @@ export function MedicinesView({
   token,
   onSaved,
   onNotice,
-}: MedicinesViewProps) {
+}: ConsumablesViewProps) {
   const { t } = useTranslation();
   const [locationFilter, setLocationFilter] = useState("");
   const [expiredOnly, setExpiredOnly] = useState(false);
@@ -34,11 +46,11 @@ export function MedicinesView({
   const [deletingFiltered, setDeletingFiltered] = useState(false);
   const busy = usingId !== null || removingId !== null || deletingFiltered;
   const today = todayIsoDate();
-  const medicines = items.filter((item) => item.item_type === "medicine");
+  const consumables = items.filter((item) => item.item_type === kind);
   const locationOptions = useMemo(() => {
     const seen = new Map<string, string>();
     for (const item of items) {
-      if (item.item_type !== "medicine") {
+      if (item.item_type !== kind) {
         continue;
       }
       const key = locationKey(item, places);
@@ -48,18 +60,18 @@ export function MedicinesView({
       }
     }
     return [...seen.entries()].sort((left, right) => left[1].localeCompare(right[1]));
-  }, [items, places, sites]);
+  }, [items, kind, places, sites]);
 
-  const visible = medicines.filter((item) => {
+  const visible = consumables.filter((item) => {
     if (locationFilter && locationKey(item, places) !== locationFilter) {
       return false;
     }
-    if (expiredOnly && !isExpiredMedicine(item, today)) {
+    if (expiredOnly && !isExpiredConsumable(item, today)) {
       return false;
     }
     return true;
   });
-  const expiredCount = medicines.filter((item) => isExpiredMedicine(item, today)).length;
+  const expiredCount = consumables.filter((item) => isExpiredConsumable(item, today)).length;
 
   async function takeDose(item: Item) {
     setUsingId(item.id);
@@ -68,7 +80,13 @@ export function MedicinesView({
       onSaved();
       onNotice(t("medicineUsed", { name: item.display_name }));
     } catch (error) {
-      onNotice(error instanceof Error ? error.message : t("unableToUseMedicine"));
+      onNotice(
+        error instanceof Error
+          ? error.message
+          : kind === "food"
+            ? t("unableToUseFood")
+            : t("unableToUseMedicine")
+      );
     } finally {
       setUsingId(null);
     }
@@ -95,7 +113,13 @@ export function MedicinesView({
     if (!visible.length) {
       return;
     }
-    if (!window.confirm(t("confirmDeleteFiltered", { count: visible.length }))) {
+    if (
+      !window.confirm(
+        kind === "food"
+          ? t("confirmDeleteFilteredFood", { count: visible.length })
+          : t("confirmDeleteFiltered", { count: visible.length })
+      )
+    ) {
       return;
     }
 
@@ -108,15 +132,23 @@ export function MedicinesView({
         removed += 1;
       }
       onSaved();
-      onNotice(t("filteredMedicinesDeleted", { count: removed }));
+      onNotice(
+        kind === "food"
+          ? t("filteredFoodDeleted", { count: removed })
+          : t("filteredMedicinesDeleted", { count: removed })
+      );
     } catch (error) {
       onSaved();
       onNotice(
         removed
-          ? t("filteredMedicinesPartiallyDeleted", { removed, total: ids.length })
+          ? kind === "food"
+            ? t("filteredFoodPartiallyDeleted", { removed, total: ids.length })
+            : t("filteredMedicinesPartiallyDeleted", { removed, total: ids.length })
           : error instanceof Error
             ? error.message
-            : t("unableToDeleteFiltered")
+            : kind === "food"
+              ? t("unableToDeleteFilteredFood")
+              : t("unableToDeleteFiltered")
       );
     } finally {
       setDeletingFiltered(false);
@@ -127,11 +159,11 @@ export function MedicinesView({
     <section className="panel inventory-panel">
       <div className="panel-heading">
         <div>
-          <h2>{t("medicines")}</h2>
-          <p>{t("medicineCabinetIntro")}</p>
+          <h2>{kind === "food" ? t("food") : t("medicines")}</h2>
+          <p>{kind === "food" ? t("foodCabinetIntro") : t("medicineCabinetIntro")}</p>
         </div>
         <p className="medicine-counts">
-          {medicines.length} {t("medicines")}
+          {consumables.length} {kind === "food" ? t("food") : t("medicines")}
           {expiredCount ? ` · ${expiredCount} ${t("expiredCount")}` : ""}
         </p>
       </div>
@@ -186,14 +218,18 @@ export function MedicinesView({
             </thead>
             <tbody>
               {visible.map((item) => {
-                const expired = isExpiredMedicine(item, today);
+                const expired = isExpiredConsumable(item, today);
                 const path = locationPath(item, places, sites);
+                const expiration =
+                  kind === "food"
+                    ? item.food_details?.expiration_date
+                    : item.medicine_details?.expiration_date;
                 return (
                   <tr key={item.id} className={expired ? "expired-row" : undefined}>
                     <td>
                       <div className="item-cell">
-                        <span className="item-icon medicine">
-                          <Pill size={16} />
+                        <span className={`item-icon ${kind}`}>
+                          {kind === "food" ? <CookingPot size={16} /> : <Pill size={16} />}
                         </span>
                         <div>
                           <strong>{item.display_name}</strong>
@@ -205,9 +241,7 @@ export function MedicinesView({
                     <td data-label={t("quantity")}>
                       {item.quantity} {item.unit}
                     </td>
-                    <td data-label={t("expirationDate")}>
-                      {item.medicine_details?.expiration_date ?? "—"}
-                    </td>
+                    <td data-label={t("expirationDate")}>{expiration ?? "—"}</td>
                     <td className="actions-cell">
                       <div className="medicine-row-actions">
                         <button
@@ -237,10 +271,16 @@ export function MedicinesView({
             </tbody>
           </table>
         </div>
-      ) : medicines.length && (locationFilter || expiredOnly) ? (
-        <Empty title={t("noMatchingMedicines")} detail={t("noMatchingMedicinesDetail")} />
+      ) : consumables.length && (locationFilter || expiredOnly) ? (
+        <Empty
+          title={kind === "food" ? t("noMatchingFoods") : t("noMatchingMedicines")}
+          detail={kind === "food" ? t("noMatchingFoodsDetail") : t("noMatchingMedicinesDetail")}
+        />
       ) : (
-        <Empty title={t("noMedicines")} detail={t("noMedicinesDetail")} />
+        <Empty
+          title={kind === "food" ? t("noFoods") : t("noMedicines")}
+          detail={kind === "food" ? t("noFoodsDetail") : t("noMedicinesDetail")}
+        />
       )}
     </section>
   );

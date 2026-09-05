@@ -1,3 +1,4 @@
+import { foods } from "./foods";
 import { inventory } from "./inventory";
 import { items } from "./items";
 import { locations } from "./locations";
@@ -11,6 +12,7 @@ export const enMessages = {
   ...items,
   ...locations,
   ...medicines,
+  ...foods,
   ...welcome,
 };
 

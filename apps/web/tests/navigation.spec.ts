@@ -20,6 +20,10 @@ test("updates the URL when switching pages", async ({ page }) => {
   await expect(page).toHaveURL("/medicines");
   await expect(page.getByRole("heading", { name: "In the cabinet." })).toBeVisible();
 
+  await page.getByRole("link", { name: "Food", exact: true }).click();
+  await expect(page).toHaveURL("/foods");
+  await expect(page.getByRole("heading", { name: "In the pantry." })).toBeVisible();
+
   await page.getByRole("link", { name: "Locations" }).click();
   await expect(page).toHaveURL("/locations");
   await expect(page.getByRole("heading", { name: "Your locations." })).toBeVisible();
@@ -33,12 +37,12 @@ test("updates the URL when switching pages", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Create and edit items." })).toBeVisible();
 });
 
-test("opens a shared medicines URL", async ({ page }) => {
+test("opens a shared foods URL", async ({ page }) => {
   await signedIn(page);
-  await page.goto("/medicines");
+  await page.goto("/foods");
 
-  await expect(page).toHaveURL("/medicines");
-  await expect(page.getByRole("heading", { name: "In the cabinet." })).toBeVisible();
+  await expect(page).toHaveURL("/foods");
+  await expect(page.getByRole("heading", { name: "In the pantry." })).toBeVisible();
 });
 
 test("opens a shared items URL", async ({ page }) => {

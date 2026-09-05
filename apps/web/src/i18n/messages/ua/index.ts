@@ -1,5 +1,6 @@
 import type { MessageCatalog } from "../en";
 
+import { foods } from "./foods";
 import { inventory } from "./inventory";
 import { items } from "./items";
 import { locations } from "./locations";
@@ -13,5 +14,6 @@ export const uaMessages = {
   ...items,
   ...locations,
   ...medicines,
+  ...foods,
   ...welcome,
 } satisfies MessageCatalog;

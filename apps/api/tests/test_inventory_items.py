@@ -101,6 +101,52 @@ async def test_medicine_requires_an_expiration_date(client: AsyncClient, headers
 
 
 @pytest.mark.asyncio
+async def test_inventory_item_food(client: AsyncClient, headers):
+    auth = await headers("food@example.com")
+    site_id, place_id = await setup_location(client, auth, "Pantry")
+
+    item_resp = await client.post(
+        "/api/v1/inventory-items",
+        json={
+            "site_id": site_id,
+            "place_id": place_id,
+            "item_type": "food",
+            "display_name": "Tomato soup",
+            "quantity": 4,
+            "unit": "cans",
+            "food_details": {"expiration_date": "2028-06-01", "form": "canned"},
+        },
+        headers=auth,
+    )
+    assert item_resp.status_code == 201
+    item = item_resp.json()
+    assert item["item_type"] == "food"
+    assert item["food_details"]["expiration_date"] == "2028-06-01"
+    assert item["food_details"]["form"] == "canned"
+
+    listed = await client.get("/api/v1/inventory-items?item_type=food", headers=auth)
+    assert len(listed.json()) == 1
+
+
+@pytest.mark.asyncio
+async def test_food_requires_an_expiration_date(client: AsyncClient, headers):
+    auth = await headers("food-invariants@example.com")
+    site_id, place_id = await setup_location(client, auth)
+
+    resp = await client.post(
+        "/api/v1/inventory-items",
+        json={
+            "site_id": site_id,
+            "place_id": place_id,
+            "item_type": "food",
+            "display_name": "Beans",
+        },
+        headers=auth,
+    )
+    assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
 async def test_details_must_match_the_item_type(client: AsyncClient, headers):
     auth = await headers("invariants@example.com")
     site_id, place_id = await setup_location(client, auth)
@@ -117,6 +163,19 @@ async def test_details_must_match_the_item_type(client: AsyncClient, headers):
         headers=auth,
     )
     assert mismatched.status_code == 422
+
+    food_on_other = await client.post(
+        "/api/v1/inventory-items",
+        json={
+            "site_id": site_id,
+            "place_id": place_id,
+            "item_type": "other",
+            "display_name": "Box",
+            "food_details": {"expiration_date": "2027-12-31"},
+        },
+        headers=auth,
+    )
+    assert food_on_other.status_code == 422
 
     created = await client.post(
         "/api/v1/inventory-items",
@@ -367,7 +426,29 @@ async def test_use_rejects_non_medicine_items(client: AsyncClient, headers):
     )
     resp = await client.post(f"/api/v1/inventory-items/{created.json()['id']}/use", headers=auth)
     assert resp.status_code == 400
-    assert resp.json()["detail"] == "Only medicine can be used this way"
+    assert resp.json()["detail"] == "Only medicine and food can be used this way"
+
+
+@pytest.mark.asyncio
+async def test_using_food_reduces_quantity_by_one(client: AsyncClient, headers):
+    auth = await headers("use-food@example.com")
+    site_id, place_id = await setup_location(client, auth)
+    created = await client.post(
+        "/api/v1/inventory-items",
+        json={
+            "site_id": site_id,
+            "place_id": place_id,
+            "item_type": "food",
+            "display_name": "Tomato soup",
+            "quantity": 4,
+            "unit": "cans",
+            "food_details": {"expiration_date": "2028-06-01"},
+        },
+        headers=auth,
+    )
+    used = await client.post(f"/api/v1/inventory-items/{created.json()['id']}/use", headers=auth)
+    assert used.status_code == 200
+    assert used.json()["quantity"] == 3
 
 
 @pytest.mark.asyncio
@@ -428,3 +509,26 @@ async def test_patch_can_change_item_type_and_all_fields(client: AsyncClient, he
     )
     assert missing_details.status_code == 400
     assert "medicine_details" in missing_details.json()["detail"]
+
+    missing_food = await client.patch(
+        f"/api/v1/inventory-items/{item_id}",
+        json={"item_type": "food"},
+        headers=auth,
+    )
+    assert missing_food.status_code == 400
+    assert "food_details" in missing_food.json()["detail"]
+
+    to_food = await client.patch(
+        f"/api/v1/inventory-items/{item_id}",
+        json={
+            "item_type": "food",
+            "display_name": "Beans",
+            "unit": "cans",
+            "food_details": {"expiration_date": "2029-01-01", "form": "canned"},
+        },
+        headers=auth,
+    )
+    assert to_food.status_code == 200
+    assert to_food.json()["item_type"] == "food"
+    assert to_food.json()["food_details"]["form"] == "canned"
+    assert to_food.json()["medicine_details"] is None

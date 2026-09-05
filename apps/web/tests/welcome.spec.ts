@@ -241,3 +241,79 @@ test("shows an equipment warranty end date in the inventory table", async ({ pag
 
   await expect(page.getByText("Warranty ends 2026-11-18")).toBeVisible();
 });
+
+test("sends a food best-by date when adding an item", async ({ page }) => {
+  let foodPayload: Record<string, unknown> | undefined;
+
+  await page.addInitScript(() => {
+    localStorage.setItem("inventory-token", "test-token");
+    localStorage.setItem("inventory-language", "en");
+  });
+  await page.route("**/api/v1/**", async (route) => {
+    const request = route.request();
+    const path = new URL(request.url()).pathname;
+
+    if (path.endsWith("/inventory-items") && request.method() === "POST") {
+      foodPayload = request.postDataJSON() as Record<string, unknown>;
+      await route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify(foodPayload),
+      });
+      return;
+    }
+
+    const response = path.endsWith("/sites")
+      ? [{ id: 1, name: "Home" }]
+      : path.endsWith("/places")
+        ? [{ id: 2, site_id: 1, name: "Pantry" }]
+        : [];
+    await route.fulfill({ contentType: "application/json", body: JSON.stringify(response) });
+  });
+  await page.goto("/");
+
+  await page.locator("#quick-add-form").getByRole("button", { name: "Food" }).click();
+  await page.getByRole("textbox", { name: "Item name" }).fill("Tomato soup");
+  await page.getByLabel("Site").selectOption("1");
+  await page.getByLabel("Places").selectOption("2");
+  await page.getByLabel("Expiration date").fill("2028-06-01");
+  await page.getByRole("button", { name: "Add to inventory" }).click();
+
+  await expect
+    .poll(() => foodPayload)
+    .toMatchObject({
+      item_type: "food",
+      food_details: { expiration_date: "2028-06-01" },
+    });
+});
+
+test("shows a food expiration date in the inventory table", async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem("inventory-token", "test-token");
+    localStorage.setItem("inventory-language", "en");
+  });
+  await page.route("**/api/v1/**", async (route) => {
+    const path = new URL(route.request().url()).pathname;
+    const response = path.endsWith("/inventory-items")
+      ? [
+          {
+            id: 1,
+            display_name: "Tomato soup",
+            item_type: "food",
+            quantity: 4,
+            unit: "cans",
+            place_id: 2,
+            status: "active",
+            food_details: { expiration_date: "2028-06-01" },
+          },
+        ]
+      : path.endsWith("/places")
+        ? [{ id: 2, site_id: 1, name: "Pantry" }]
+        : path.endsWith("/sites")
+          ? [{ id: 1, name: "Home" }]
+          : [];
+    await route.fulfill({ contentType: "application/json", body: JSON.stringify(response) });
+  });
+  await page.goto("/");
+
+  await expect(page.getByText("Expires 2028-06-01")).toBeVisible();
+});
