@@ -13,6 +13,7 @@ export const shared = {
   closeMore: "Close menu",
   signOut: "Sign out",
   barcodeReady: "Barcode lookup is ready when adding an item.",
+  barcodeScanReady: "Point your camera at a barcode or type the digits below.",
   remindersComing: "Reminder views arrive with the API reminder module.",
   loadingInventory: "Loading your inventory",
   name: "Name",

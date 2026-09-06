@@ -22,5 +22,13 @@ API_PID=$!
 trap 'kill "$API_PID"' EXIT INT TERM
 
 echo "API Docs available at http://localhost:8000/docs"
-echo "Starting web app at http://localhost:5173 ..."
-npm --prefix apps/web run dev -- --host 127.0.0.1
+
+if [ "${HTTPS:-}" = "1" ]; then
+  echo "Starting web app with HTTPS at https://localhost:5173 ..."
+  echo "On your phone, open https://<this-machine-ip>:5173 and accept the certificate warning."
+  npm --prefix apps/web run dev:https
+else
+  echo "Starting web app at http://localhost:5173 ..."
+  echo "For phone camera scanning, restart with: HTTPS=1 ./start-dev.sh"
+  npm --prefix apps/web run dev -- --host 127.0.0.1
+fi

@@ -25,6 +25,12 @@ export const inventory = {
   barcode: "Barcode",
   barcodePlaceholder: "e.g. 4006381333931",
   lookUpBarcode: "Look up",
+  scanBarcode: "Scan barcode",
+  scanBarcodeAction: "Scan",
+  scanBarcodeHint: "Point your camera at the barcode. It will fill in automatically.",
+  barcodeScanFailed: "Could not access the camera. Check permissions and try again.",
+  barcodeScanRequiresHttps:
+    "Camera scanning needs HTTPS. Type the barcode digits below, or open this site over a secure connection.",
   barcodeLookupHint: "Type 6 to 14 digits, then look up in your catalog.",
   barcodeFound: "Found in your catalog: {name}",
   barcodeNotFound: "Not in your catalog yet. Add this item to save it for next time.",

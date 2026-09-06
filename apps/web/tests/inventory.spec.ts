@@ -370,3 +370,35 @@ test("keeps the item when delete is cancelled", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Delete Ibuprofen" })).toBeVisible();
   expect(deleteCalls).toBe(0);
 });
+
+test("shows a scan button on mobile widths", async ({ page }) => {
+  await signedIn(page);
+  await mockInventory(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+
+  await expect(page.getByRole("button", { name: "Scan barcode" })).toBeVisible();
+});
+
+test("hides the scan button on desktop widths", async ({ page }) => {
+  await signedIn(page);
+  await mockInventory(page);
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/");
+
+  await expect(page.getByRole("button", { name: "Scan barcode" })).toHaveCount(0);
+});
+
+test("opens the scanner from scan lookup on mobile", async ({ page }) => {
+  await signedIn(page);
+  await mockInventory(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "Scan lookup" }).click();
+
+  await expect(page.getByRole("dialog", { name: "Scan barcode" })).toBeVisible();
+  await expect(page.getByRole("status")).toContainText(
+    "Point your camera at a barcode or type the digits below."
+  );
+});

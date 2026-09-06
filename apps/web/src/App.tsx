@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+
+import { useCanScanBarcode } from "./device";
 import { CirclePlus } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -30,6 +32,8 @@ function App() {
   const [authMode, setAuthMode] = useState<AuthMode>("login");
   const [route, setRoute] = useState<AppRoute>(() => routeFromPath(window.location.pathname));
   const [notice, setNotice] = useState<Notice | null>(null);
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const canScanBarcode = useCanScanBarcode();
   const client = useQueryClient();
   const activeView = route.view;
 
@@ -113,8 +117,15 @@ function App() {
   }
 
   function openBarcodeLookup() {
-    go({ view: "inventory" }, { key: "barcodeReady" });
+    go(
+      { view: "inventory" },
+      { key: canScanBarcode ? "barcodeScanReady" : "barcodeReady" }
+    );
     window.setTimeout(() => {
+      if (canScanBarcode) {
+        setScannerOpen(true);
+        return;
+      }
       document.getElementById("item-barcode")?.focus();
     }, 0);
   }
@@ -221,6 +232,8 @@ function App() {
             places={places.data ?? []}
             sites={sites.data ?? []}
             token={token}
+            scannerOpen={scannerOpen}
+            onScannerOpenChange={setScannerOpen}
             onSaved={invalidateInventory}
             onNotice={showNotice}
             onEditItem={openItem}

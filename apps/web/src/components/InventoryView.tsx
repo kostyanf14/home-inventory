@@ -1,7 +1,8 @@
-import { FormEvent, ReactNode, useState } from "react";
+import { FormEvent, ReactNode, Suspense, lazy, useState } from "react";
 import {
   Archive,
   Boxes,
+  Camera,
   CirclePlus,
   CookingPot,
   MapPin,
@@ -14,6 +15,7 @@ import {
 } from "lucide-react";
 
 import { api } from "../api";
+import { useCanScanBarcode } from "../device";
 import { useTranslation } from "../i18n";
 import { locationPath } from "../location";
 import {
@@ -25,6 +27,10 @@ import {
   type Site,
 } from "../types";
 import { Empty, Loading } from "./Feedback";
+
+const BarcodeScanner = lazy(() =>
+  import("./BarcodeScanner").then((module) => ({ default: module.BarcodeScanner }))
+);
 
 const CATALOG_BARCODE = /^[0-9]{6,14}$/;
 
@@ -38,6 +44,8 @@ type InventoryViewProps = {
   places: Place[];
   sites: Site[];
   token: string;
+  scannerOpen?: boolean;
+  onScannerOpenChange?: (open: boolean) => void;
   onSaved: () => void;
   onNotice: (message: string) => void;
   onEditItem: (id: number) => void;
@@ -49,6 +57,8 @@ export function InventoryView({
   places,
   sites,
   token,
+  scannerOpen = false,
+  onScannerOpenChange,
   onSaved,
   onNotice,
   onEditItem,
@@ -134,6 +144,8 @@ export function InventoryView({
           token={token}
           sites={sites}
           places={places}
+          scannerOpen={scannerOpen}
+          onScannerOpenChange={onScannerOpenChange}
           onSaved={onSaved}
           onNotice={onNotice}
         />
@@ -285,6 +297,8 @@ type QuickAddProps = {
   token: string;
   sites: Site[];
   places: Place[];
+  scannerOpen?: boolean;
+  onScannerOpenChange?: (open: boolean) => void;
   onSaved: () => void;
   onNotice: (message: string) => void;
 };
@@ -297,8 +311,17 @@ type LookupState =
   | { kind: "not_found" }
   | { kind: "error"; message: string };
 
-function QuickAdd({ token, sites, places, onSaved, onNotice }: QuickAddProps) {
+function QuickAdd({
+  token,
+  sites,
+  places,
+  scannerOpen = false,
+  onScannerOpenChange,
+  onSaved,
+  onNotice,
+}: QuickAddProps) {
   const { t } = useTranslation();
+  const canScanBarcode = useCanScanBarcode();
   const [kind, setKind] = useState<InventoryItemType>("other");
   const [siteId, setSiteId] = useState("");
   const [name, setName] = useState("");
@@ -307,7 +330,6 @@ function QuickAdd({ token, sites, places, onSaved, onNotice }: QuickAddProps) {
   const [productId, setProductId] = useState<number | null>(null);
   const [lookup, setLookup] = useState<LookupState>({ kind: "idle" });
   const sitePlaces = places.filter((place) => String(place.site_id) === siteId);
-  const catalogBarcode = CATALOG_BARCODE.test(barcode);
 
   function changeBarcode(value: string) {
     setBarcode(value.replace(/\D/g, "").slice(0, 14));
@@ -315,8 +337,9 @@ function QuickAdd({ token, sites, places, onSaved, onNotice }: QuickAddProps) {
     setLookup({ kind: "idle" });
   }
 
-  async function lookUpBarcode() {
-    if (!catalogBarcode) {
+  async function lookUpBarcode(overrideBarcode?: string) {
+    const code = (overrideBarcode ?? barcode).replace(/\D/g, "").slice(0, 14);
+    if (!CATALOG_BARCODE.test(code)) {
       setLookup({ kind: "invalid" });
       return;
     }
@@ -325,7 +348,7 @@ function QuickAdd({ token, sites, places, onSaved, onNotice }: QuickAddProps) {
     try {
       const result = await api<BarcodeLookupResponse>("/barcode/lookup", token, {
         method: "POST",
-        body: JSON.stringify({ barcode, local_only: true }),
+        body: JSON.stringify({ barcode: code, local_only: true }),
       });
       if (result.found && result.product) {
         setName(result.product.name);
@@ -348,6 +371,15 @@ function QuickAdd({ token, sites, places, onSaved, onNotice }: QuickAddProps) {
         message: error instanceof Error ? error.message : t("barcodeLookupFailed"),
       });
     }
+  }
+
+  function handleScannedBarcode(rawValue: string) {
+    const code = rawValue.replace(/\D/g, "").slice(0, 14);
+    setBarcode(code);
+    setProductId(null);
+    setLookup({ kind: "idle" });
+    onScannerOpenChange?.(false);
+    void lookUpBarcode(code);
   }
 
   function lookupMessage(): string | null {
@@ -432,7 +464,7 @@ function QuickAdd({ token, sites, places, onSaved, onNotice }: QuickAddProps) {
         </div>
         <PackagePlus size={20} />
       </div>
-      <div className="barcode-row">
+      <div className={canScanBarcode ? "barcode-row has-scanner" : "barcode-row"}>
         <label className="barcode-caption" htmlFor="item-barcode">
           {t("barcode")}
         </label>
@@ -452,6 +484,17 @@ function QuickAdd({ token, sites, places, onSaved, onNotice }: QuickAddProps) {
           placeholder={t("barcodePlaceholder")}
           aria-describedby="barcode-lookup-hint"
         />
+        {canScanBarcode && (
+          <button
+            type="button"
+            className="scan-action"
+            aria-label={t("scanBarcode")}
+            onClick={() => onScannerOpenChange?.(true)}
+          >
+            <Camera size={18} />
+            <span>{t("scanBarcodeAction")}</span>
+          </button>
+        )}
         <button
           type="button"
           className="secondary-action"
@@ -461,6 +504,15 @@ function QuickAdd({ token, sites, places, onSaved, onNotice }: QuickAddProps) {
           {t("lookUpBarcode")}
         </button>
       </div>
+      {canScanBarcode && (
+        <Suspense fallback={null}>
+          <BarcodeScanner
+            open={scannerOpen}
+            onClose={() => onScannerOpenChange?.(false)}
+            onScan={handleScannedBarcode}
+          />
+        </Suspense>
+      )}
       <p className="lookup-hint" id="barcode-lookup-hint" aria-live="polite">
         {lookupMessage() ?? t("barcodeLookupHint")}
       </p>
