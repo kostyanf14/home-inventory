@@ -20,6 +20,10 @@ class Settings(BaseSettings):
     AUTH_RATE_WINDOW_SECONDS: int = 900
     PASSWORD_MIN_LENGTH: int = 8
     EXTERNAL_LOOKUP_TIMEOUT_SECONDS: float = 5.0
+    # Open Food Facts allows about 15 product reads per minute per IP.
+    EXTERNAL_LOOKUP_RATE_LIMIT: int = 15
+    EXTERNAL_LOOKUP_RATE_WINDOW_SECONDS: int = 60
+    EXTERNAL_LOOKUP_USER_AGENT: str = "HomeInventory/0.1 (home-inventory-dev@localhost)"
 
     DATABASE_URL: str = "sqlite+aiosqlite:///./home_inventory.db"
 

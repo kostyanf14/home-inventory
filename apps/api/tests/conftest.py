@@ -5,7 +5,7 @@ import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from app.core.rate_limit import auth_limiter
+from app.core.rate_limit import auth_limiter, lookup_limiter
 from app.db.session import Base, enable_sqlite_foreign_keys, get_db
 from app.main import app
 
@@ -20,8 +20,10 @@ TestingSessionLocal = async_sessionmaker(test_engine, class_=AsyncSession, expir
 def reset_rate_limiter():
     """The auth limiter is process-wide; each test starts with an empty window."""
     auth_limiter.reset()
+    lookup_limiter.reset()
     yield
     auth_limiter.reset()
+    lookup_limiter.reset()
 
 
 @pytest_asyncio.fixture(scope="function")

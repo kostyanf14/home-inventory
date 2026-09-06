@@ -31,9 +31,10 @@ export const inventory = {
   barcodeScanFailed: "Could not access the camera. Check permissions and try again.",
   barcodeScanRequiresHttps:
     "Camera scanning needs HTTPS. Type the barcode digits below, or open this site over a secure connection.",
-  barcodeLookupHint: "Type 6 to 14 digits, then look up in your catalog.",
+  barcodeLookupHint: "Type 6 to 14 digits, then look up. Your catalog is checked first, then Open Food Facts.",
   barcodeFound: "Found in your catalog: {name}",
-  barcodeNotFound: "Not in your catalog yet. Add this item to save it for next time.",
+  barcodeFoundExternal: "Found on Open Food Facts: {name}. Check the name, then add the item to save it.",
+  barcodeNotFound: "Not in your catalog or Open Food Facts. Add this item to save the barcode for next time.",
   barcodeLookupInvalid: "Enter 6 to 14 digits to look up a barcode.",
   barcodeLookingUp: "Looking up…",
   barcodeLookupFailed: "Unable to look up that barcode.",

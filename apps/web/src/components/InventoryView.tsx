@@ -307,7 +307,7 @@ type LookupState =
   | { kind: "idle" }
   | { kind: "invalid" }
   | { kind: "looking" }
-  | { kind: "found"; name: string }
+  | { kind: "found"; name: string; source: "local" | "external" }
   | { kind: "not_found" }
   | { kind: "error"; message: string };
 
@@ -320,7 +320,7 @@ function QuickAdd({
   onSaved,
   onNotice,
 }: QuickAddProps) {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const canScanBarcode = useCanScanBarcode();
   const [kind, setKind] = useState<InventoryItemType>("other");
   const [siteId, setSiteId] = useState("");
@@ -348,19 +348,26 @@ function QuickAdd({
     try {
       const result = await api<BarcodeLookupResponse>("/barcode/lookup", token, {
         method: "POST",
-        body: JSON.stringify({ barcode: code, local_only: true }),
+        body: JSON.stringify({ barcode: code, language }),
       });
       if (result.found && result.product) {
         setName(result.product.name);
         if (result.product.default_unit) {
           setUnit(result.product.default_unit);
         }
+        const fromInternet = result.source === "external";
         const catalogType = itemTypeFromCategory(result.product.category);
         if (catalogType) {
           setKind(catalogType);
+        } else if (fromInternet) {
+          setKind("food");
         }
         setProductId(typeof result.product.id === "number" ? result.product.id : null);
-        setLookup({ kind: "found", name: result.product.name });
+        setLookup({
+          kind: "found",
+          name: result.product.name,
+          source: fromInternet ? "external" : "local",
+        });
         return;
       }
       setProductId(null);
@@ -391,7 +398,9 @@ function QuickAdd({
       case "looking":
         return t("barcodeLookingUp");
       case "found":
-        return t("barcodeFound", { name: lookup.name });
+        return lookup.source === "external"
+          ? t("barcodeFoundExternal", { name: lookup.name })
+          : t("barcodeFound", { name: lookup.name });
       case "not_found":
         return t("barcodeNotFound");
       case "error":

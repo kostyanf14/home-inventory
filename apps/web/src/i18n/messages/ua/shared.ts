@@ -12,7 +12,7 @@ export const shared = {
   more: "Ще",
   closeMore: "Закрити меню",
   signOut: "Вийти",
-  barcodeReady: "Пошук за штрихкодом доступний під час додавання речі.",
+  barcodeReady: "Пошук за штрихкодом перевіряє ваш каталог, потім Open Food Facts.",
   barcodeScanReady: "Наведіть камеру на штрихкод або введіть цифри нижче.",
   remindersComing: "Перегляд нагадувань з'явиться разом з модулем API.",
   loadingInventory: "Завантаження інвентарю",

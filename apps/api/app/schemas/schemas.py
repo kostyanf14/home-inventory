@@ -343,8 +343,10 @@ class InventoryItemRead(InventoryItemBase):
 # Barcode Lookup Schemas
 class BarcodeLookupRequest(BaseModel):
     barcode: StrictBarcode
-    # Step 1 of barcode support: the web UI looks in the caller's catalog only.
+    # When true, skip Open Food Facts. The web app now looks up locally first,
+    # then externally, unless a client explicitly sets this flag.
     local_only: bool = False
+    language: str | None = Field(default=None, max_length=8)
 
 
 class BarcodeLookupResponse(BaseModel):

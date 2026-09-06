@@ -12,7 +12,7 @@ export const shared = {
   more: "More",
   closeMore: "Close menu",
   signOut: "Sign out",
-  barcodeReady: "Barcode lookup is ready when adding an item.",
+  barcodeReady: "Barcode lookup checks your catalog, then Open Food Facts.",
   barcodeScanReady: "Point your camera at a barcode or type the digits below.",
   remindersComing: "Reminder views arrive with the API reminder module.",
   loadingInventory: "Loading your inventory",

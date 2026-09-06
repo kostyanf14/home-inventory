@@ -31,9 +31,10 @@ export const inventory = {
   barcodeScanFailed: "Не вдалося отримати доступ до камери. Перевірте дозволи та спробуйте ще раз.",
   barcodeScanRequiresHttps:
     "Сканування камерою потребує HTTPS. Введіть цифри штрихкоду нижче або відкрийте сайт через захищене з'єднання.",
-  barcodeLookupHint: "Введіть 6–14 цифр і знайдіть товар у своєму каталозі.",
+  barcodeLookupHint: "Введіть 6–14 цифр і знайдіть товар. Спочатку перевіряється ваш каталог, потім Open Food Facts.",
   barcodeFound: "Знайдено в каталозі: {name}",
-  barcodeNotFound: "Ще немає в каталозі. Додайте річ, щоб зберегти штрихкод на наступний раз.",
+  barcodeFoundExternal: "Знайдено в Open Food Facts: {name}. Перевірте назву й додайте річ, щоб зберегти її.",
+  barcodeNotFound: "Немає ні в каталозі, ні в Open Food Facts. Додайте річ, щоб зберегти штрихкод на наступний раз.",
   barcodeLookupInvalid: "Введіть 6–14 цифр, щоб знайти штрихкод.",
   barcodeLookingUp: "Пошук…",
   barcodeLookupFailed: "Не вдалося знайти цей штрихкод.",

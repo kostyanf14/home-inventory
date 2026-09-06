@@ -231,7 +231,51 @@ test("prefills the item name from a local barcode lookup", async ({ page }) => {
   await expect(
     page.locator("#quick-add-form").getByRole("button", { name: "Equipment" })
   ).toHaveClass(/active/);
-  await expect.poll(() => lookupBody).toEqual({ barcode: "4006381333931", local_only: true });
+  await expect.poll(() => lookupBody).toEqual({ barcode: "4006381333931", language: "en" });
+});
+
+test("prefills the item name from Open Food Facts", async ({ page }) => {
+  await signedIn(page);
+  let lookupBody: Record<string, unknown> | undefined;
+
+  await page.route("**/api/v1/**", async (route) => {
+    const request = route.request();
+    const path = new URL(request.url()).pathname;
+
+    if (path.endsWith("/barcode/lookup") && request.method() === "POST") {
+      lookupBody = request.postDataJSON() as Record<string, unknown>;
+      await route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({
+          found: true,
+          source: "external",
+          product: {
+            id: null,
+            name: "Nutella",
+            barcode: "3017620422003",
+            category: "Spreads",
+            source: "external",
+          },
+          message: "Product retrieved from Open Food Facts. Confirm to save it to your catalog.",
+        }),
+      });
+      return;
+    }
+
+    const body = path.endsWith("/sites") ? SITES : path.endsWith("/places") ? PLACES : ITEMS;
+    await route.fulfill({ contentType: "application/json", body: JSON.stringify(body) });
+  });
+  await page.goto("/");
+
+  await page.getByLabel("Barcode").fill("3017620422003");
+  await page.getByRole("button", { name: "Look up" }).click();
+
+  await expect(page.getByText("Found on Open Food Facts: Nutella")).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "Item name" })).toHaveValue("Nutella");
+  await expect(page.locator("#quick-add-form").getByRole("button", { name: "Food" })).toHaveClass(
+    /active/
+  );
+  await expect.poll(() => lookupBody).toEqual({ barcode: "3017620422003", language: "en" });
 });
 
 test("saves a new barcode on the item so the local catalog can learn it", async ({ page }) => {
@@ -272,7 +316,7 @@ test("saves a new barcode on the item so the local catalog can learn it", async 
 
   await page.getByLabel("Barcode").fill("5901234123457");
   await page.getByRole("button", { name: "Look up" }).click();
-  await expect(page.getByText("Not in your catalog yet")).toBeVisible();
+  await expect(page.getByText("Not in your catalog or Open Food Facts")).toBeVisible();
 
   await page.getByRole("textbox", { name: "Item name" }).fill("Mustard");
   await page.getByLabel("Site").selectOption("1");

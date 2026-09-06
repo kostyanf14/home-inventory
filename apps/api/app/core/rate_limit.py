@@ -36,6 +36,7 @@ class SlidingWindowRateLimiter:
 
 
 auth_limiter = SlidingWindowRateLimiter()
+lookup_limiter = SlidingWindowRateLimiter()
 
 
 def client_key(request: Request, scope: str, identity: str | None = None) -> str:
@@ -59,5 +60,19 @@ def enforce_auth_rate_limit(request: Request, scope: str, identity: str | None =
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail="Too many attempts. Try again later.",
+            headers={"Retry-After": str(retry_after)},
+        )
+
+
+def enforce_external_lookup_rate_limit(request: Request, user_id: int) -> None:
+    retry_after = lookup_limiter.hit(
+        client_key(request, "barcode-external", str(user_id)),
+        settings.EXTERNAL_LOOKUP_RATE_LIMIT,
+        settings.EXTERNAL_LOOKUP_RATE_WINDOW_SECONDS,
+    )
+    if retry_after:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many barcode lookups. Try again in a minute.",
             headers={"Retry-After": str(retry_after)},
         )
