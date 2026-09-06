@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-import { useCanScanBarcode } from "./device";
+import { shouldAutofocusForms, useCanScanBarcode } from "./device";
 import { CirclePlus } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -126,7 +126,9 @@ function App() {
         setScannerOpen(true);
         return;
       }
-      document.getElementById("item-barcode")?.focus();
+      if (shouldAutofocusForms()) {
+        document.getElementById("item-barcode")?.focus();
+      }
     }, 0);
   }
 
@@ -136,7 +138,9 @@ function App() {
       window.setTimeout(() => {
         const form = document.getElementById("quick-add-form");
         form?.scrollIntoView({ behavior: "smooth", block: "start" });
-        form?.querySelector<HTMLInputElement | HTMLSelectElement>("input, select")?.focus();
+        if (shouldAutofocusForms()) {
+          form?.querySelector<HTMLInputElement | HTMLSelectElement>("input, select")?.focus();
+        }
       }, 0);
       return;
     }
@@ -146,7 +150,9 @@ function App() {
       window.setTimeout(() => {
         const form = document.getElementById("item-editor-form");
         form?.scrollIntoView({ behavior: "smooth", block: "start" });
-        document.getElementById("editor-name")?.focus();
+        if (shouldAutofocusForms()) {
+          document.getElementById("editor-name")?.focus();
+        }
       }, 0);
       return;
     }
@@ -156,7 +162,9 @@ function App() {
 
     setNotice(null);
     form?.scrollIntoView({ behavior: "smooth", block: "start" });
-    form?.querySelector<HTMLInputElement | HTMLSelectElement>("input, select")?.focus();
+    if (shouldAutofocusForms()) {
+      form?.querySelector<HTMLInputElement | HTMLSelectElement>("input, select")?.focus();
+    }
   }
 
   if (!token) {

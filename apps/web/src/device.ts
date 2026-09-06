@@ -3,6 +3,10 @@ import { useEffect, useState } from "react";
 const MOBILE_MEDIA_QUERY = "(max-width: 1023px)";
 const COARSE_POINTER_QUERY = "(pointer: coarse)";
 
+export function shouldAutofocusForms(): boolean {
+  return typeof window !== "undefined" && !window.matchMedia(MOBILE_MEDIA_QUERY).matches;
+}
+
 export function canUseMobileBarcodeScan(): boolean {
   if (typeof window === "undefined") {
     return false;

@@ -60,11 +60,16 @@ body.sheet-open {
   overflow: hidden;
 }
 
-button,
+button {
+  font: inherit;
+}
+
+/* 16px must be on the control itself. Inherit from 12px labels makes iOS zoom on focus. */
 input,
 select,
 textarea {
-  font: inherit;
+  font-family: inherit;
+  font-size: 16px;
 }
 
 button {
@@ -470,7 +475,7 @@ textarea:focus-visible {
   border: 0;
   outline: 0;
   background: transparent;
-  font-size: 14px;
+  font-size: 16px;
   min-width: 0;
 }
 
@@ -625,7 +630,6 @@ textarea:focus-visible {
   border-radius: 10px;
   padding: 10px;
   color: #29433e;
-  font: inherit;
   resize: vertical;
 }
 
@@ -1428,13 +1432,6 @@ small {
 
   .search {
     width: 100%;
-  }
-
-  /* iOS Safari zooms the page when a focused field is under 16px. */
-  input,
-  select,
-  textarea {
-    font-size: 16px;
   }
 
   .place-row {
