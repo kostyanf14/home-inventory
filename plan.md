@@ -448,9 +448,9 @@ Reason:
 For the first release, barcode support can be implemented in one of two ways:
 
 1. user enters barcode number manually in web and receives prefilled product data
-2. browser camera scanning is added only if it is cheap and reliable enough
+2. browser camera scanning on mobile web (delivered; see section 18)
 
-The important requirement for MVP is barcode-based lookup and prefill, not full mobile-grade camera scanning.
+The important requirement for MVP is barcode-based lookup and prefill. Native app camera scanning remains a later step (Phase 6).
 
 ## 8. API Design
 
@@ -613,8 +613,9 @@ Later, this can evolve into mobile offline sync when the React Native app is int
 
 - implement barcode lookup flow in backend
 - implement barcode input flow in web
+- implement mobile web camera scanning in quick add (delivered)
 - implement backend barcode lookup service
-- integrate first external product source
+- integrate first external product source (Open Food Facts API exists on backend; web still uses `local_only`)
 - save scan results into local catalog
 
 ### Phase 4: Alerts and Reports
@@ -686,7 +687,7 @@ After approving this plan, the next step should be to define:
 4. screen map for mobile and web
 5. deployment target for backend and storage
 
-## 18. Implementation Status (2026-09-05)
+## 18. Implementation Status (2026-09-06)
 
 The API and web MVP foundations are implemented. This section records the current codebase rather than future architecture recommendations.
 
@@ -756,6 +757,19 @@ Open Food Facts from the web UI are not in this step.
   item only and do not create a product.
 - Brand, manufacturer, and image are still unused in this step.
 
+### Delivered: Mobile barcode scanning (web camera)
+
+This is the second barcode slice from section 7: camera capture on mobile/touch web, still using the local catalog lookup flow from step 1.
+
+- Quick add shows a **Scan** button on mobile and touch-primary viewports (screen width, coarse pointer, or touch support). Desktop keeps typed entry only.
+- **Scan lookup** in the sidebar opens the camera scanner on those devices; on desktop it still focuses the barcode field.
+- Scanning uses `@zxing/browser` in a lazy-loaded modal with the rear camera when available. A successful read fills the barcode field and runs the same `local_only` catalog lookup as typed entry.
+- If the camera is unavailable (permissions, unsupported browser), the scanner shows an error. On plain HTTP (typical LAN dev), it explains that HTTPS is required and the user can still type digits.
+- Local development can serve HTTPS with `HTTPS=1 ./start-dev.sh` or `npm run dev:https` from `apps/web` (`@vitejs/plugin-basic-ssl`, self-signed cert). API calls stay on the Vite `/api` proxy, so only the web port needs HTTPS for phone camera testing.
+- Playwright coverage includes showing/hiding the scan button by viewport and opening the scanner from **Scan lookup** on mobile widths.
+
+Open Food Facts from the web app and `scan_history` are still later steps.
+
 ### Delivered: Database and Migrations
 
 - Local development uses SQLite through `aiosqlite` by default.
@@ -786,8 +800,8 @@ Open Food Facts from the web UI are not in this step.
   (see `apps/web/.env.example`); it stays unset for the dev proxy and same-origin deployments.
 - Users can create, update, and delete sites and places. Places are displayed beneath their site.
 - Users can add inventory items as `other`, `medicine`, `food`, or `equipment`.
-- Quick add accepts a typed barcode (digits only, 6-14 characters for catalog lookup).
-  `Look up` calls `POST /api/v1/barcode/lookup` with `local_only: true` and prefills name,
+- Quick add accepts a typed barcode (digits only, 6-14 characters for catalog lookup) or a mobile camera scan.
+  `Look up` (or a successful scan) calls `POST /api/v1/barcode/lookup` with `local_only: true` and prefills name,
   unit, and item type from the caller's catalog. Unknown codes stay editable; adding the item
   writes the barcode onto the inventory row and upserts a user-owned `products` row (name,
   barcode, default unit, and category from item type) for the next lookup.
@@ -841,7 +855,7 @@ Open Food Facts from the web UI are not in this step.
 - Current browser coverage includes authentication UI, EN/UA switching, notices, site
   add/update/delete, quick-add focus behavior, equipment date payloads, warranty-date display,
   food create/expiry display, inventory search, site-scoped place selection, typed barcode lookup
-  against the local catalog, saving a new barcode on item create, inventory item deletion, the
+  against the local catalog, mobile barcode scan UI, saving a new barcode on item create, inventory item deletion, the
   sidebar environment note, shareable page URLs, the items editor, the medicines tab (location and
   expired filters, use 1), the food tab (use 1), token refresh, expired-session sign-out, and
   API validation messages.
@@ -855,18 +869,18 @@ Open Food Facts from the web UI are not in this step.
 
 - `.gitignore` excludes Python environments, SQLite databases, Node modules, build output, test reports, local environment files, logs, and editor artifacts.
 - `dev-dev.bat` starts the API and web app on Windows after installing development dependencies.
-- `start-dev.sh` provides the equivalent Bash workflow.
+- `start-dev.sh` provides the equivalent Bash workflow. Pass `HTTPS=1` to start the web app with a self-signed certificate for phone camera testing (`npm run dev:https`).
 - `apps/api/start-dev.bat` starts the API independently on Windows.
 - Default local URLs:
-  - Web: `http://127.0.0.1:5173`
+  - Web: `http://127.0.0.1:5173` (or `https://127.0.0.1:5173` with `HTTPS=1`)
   - API: `http://127.0.0.1:8000`
   - API docs: `http://127.0.0.1:8000/docs`
 
 ### Remaining MVP Work
 
 - Complete product catalog CRUD (separate from inventory item editing, which is done).
-- Barcode lookup in the web UI is connected for local catalog prefill (typed digits,
-  `local_only`); camera scanning and Open Food Facts from the web app are still later steps.
+- Barcode lookup in the web UI is connected for local catalog prefill (typed digits and mobile camera scan,
+  `local_only`). Open Food Facts from the web app is still a later step.
 - Add filters beyond item type and text search.
 - Add document/photo upload and object storage integration.
 - Add reminder persistence, `scan_history`, warranty views, and dashboard/reporting workflows.
